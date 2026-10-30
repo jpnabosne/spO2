@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bancada SpO₂ – pinagem de conectores</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EEF1EE; --panel:#FAFBFA; --ink:#17262B; --muted:#5B6B70; --line:#C9D2CF;
+  --shell:#D5DBD9; --accent:#1F6F5C;
+  --led:#E07B00; --red:#D6362B; --ir:#7A3FB5; --pd:#1F7A8C; --shield:#6B7780; --id:#B58900; --nc:#9AA3A8;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#101719; --panel:#182225; --ink:#E4ECEA; --muted:#93A5A8; --line:#2C3B3F;
+    --shell:#2A3A3E; --accent:#4DBB9F;
+    --led:#F0A03A; --red:#F0675C; --ir:#B28AE0; --pd:#4DB7CA; --shield:#98A6AD; --id:#D9B440; --nc:#6F7E83;
+    color-scheme:dark;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.5 "IBM Plex Sans",system-ui,sans-serif;
+  padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}
+.mono{font-family:"IBM Plex Mono",ui-monospace,monospace}
+header{padding:20px 20px 12px;max-width:1200px;margin:0 auto}
+h1{font-size:1.5rem;margin:0 0 4px;font-weight:600}
+header p{margin:0;color:var(--muted);max-width:60ch}
+.warn{max-width:1160px;margin:8px auto 0;padding:10px 14px;border-left:4px solid var(--led);background:var(--panel);font-size:.9rem}
+main{max-width:1200px;margin:16px auto;padding:0 20px 40px;display:grid;grid-template-columns:320px 1fr;gap:20px;align-items:start}
+@media(max-width:820px){main{grid-template-columns:1fr}}
+aside,.ficha{background:var(--panel);border:1px solid var(--line);border-radius:6px}
+aside{padding:14px;position:sticky;top:8px}
+@media(max-width:820px){aside{position:static}}
+input,select,button{font:inherit;color:inherit}
+input[type=search],select{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:4px;background:var(--bg);margin-bottom:8px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#lista{list-style:none;margin:8px 0 0;padding:0;max-height:60vh;overflow:auto}
+#lista button{display:block;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--line);padding:10px 6px;cursor:pointer}
+#lista button[aria-current=true]{background:var(--bg);box-shadow:inset 3px 0 var(--accent)}
+#lista small{color:var(--muted);display:block}
+.tag{display:inline-block;font-size:.75rem;padding:1px 7px;border:1px solid var(--line);border-radius:10px;margin-right:4px;color:var(--muted)}
+.tag.ok{border-color:var(--accent);color:var(--accent)}
+.tag.ex{border-color:var(--led);color:var(--led)}
+.ficha{padding:20px}
+.ficha h2{margin:0 0 4px;font-size:1.3rem}
+.meta{color:var(--muted);margin-bottom:12px}
+.tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0}
+.tools button,.btn{padding:7px 12px;border:1px solid var(--line);background:var(--bg);border-radius:4px;cursor:pointer}
+.tools button[aria-pressed=true]{border-color:var(--accent);color:var(--accent);font-weight:600}
+.diagrama{overflow-x:auto;border:1px solid var(--line);border-radius:6px;padding:8px;background:var(--bg)}
+svg{display:block;margin:0 auto;max-width:100%;height:auto}
+.pin{cursor:pointer}
+.pin circle{stroke:var(--ink);stroke-width:1.5;transition:r .12s}
+.pin.sel circle,.pin:hover circle{stroke-width:3.5}
+.pin text{font:600 12px "IBM Plex Mono",monospace;fill:#fff;pointer-events:none}
+.pin.vazio text{fill:var(--ink)}
+.leg{display:flex;flex-wrap:wrap;gap:6px 16px;margin:10px 0;font-size:.85rem}
+.leg i{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+h3{font-size:1rem;margin:22px 0 6px}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.92rem}
+th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:600;font-size:.82rem}
+tr.sel{background:var(--bg);box-shadow:inset 3px 0 var(--accent)}
+tbody tr[data-n]{cursor:pointer}
+.vazio-msg{color:var(--muted);padding:30px 10px;text-align:center}
+footer{max-width:1200px;margin:0 auto;padding:0 20px 30px;color:var(--muted);font-size:.85rem}
+</style>
+</head>
+<body>
+<header>
+  <h1>Bancada SpO₂: pinagem de conectores</h1>
+  <p>Consulte onde soldar e como testar o LED vermelho, o LED infravermelho e o fotodiodo de cada sensor.</p>
+</header>
+<div class="warn"><strong>Dados de exemplo.</strong> As fichas abaixo mostram o formato e não vieram de medições reais. Substitua pelos seus conectores e marque “verificado” só depois de testar na bancada.</div>
+
+<main>
+  <aside>
+    <input type="search" id="busca" placeholder="Buscar modelo, pino, cor do fio…" aria-label="Buscar">
+    <select id="fPublico" aria-label="Filtrar por público"><option value="">Todos os públicos</option></select>
+    <select id="fConector" aria-label="Filtrar por conector"><option value="">Todos os conectores</option></select>
+    <ul id="lista"></ul>
+    <p class="meta" id="contagem" style="margin:8px 0 0"></p>
+    <button class="btn" id="modelo" style="margin-top:10px">Copiar modelo de nova ficha</button>
+  </aside>
+  <section class="ficha" id="ficha" aria-live="polite"></section>
+</main>
+<footer>Para adicionar um conector, edite o bloco JSON no início do script e salve o arquivo.</footer>
+
+<!-- ===================== DADOS (edite aqui) =====================
+ layout.linhas: quantidade de pinos por fileira, de cima para baixo (DB9 = [5,4], DB15 = [8,7]).
+ Pinos numerados em sequência, vistos de frente (lado do macho), da esquerda para a direita.
+ tipo do pino: led-verm | led-iv | led (LEDs em antiparalelo) | fotodiodo | blindagem | id | nc
+-->
+<script id="dados" type="application/json">
+[
+  {
+    "id": "exemplo-db9-adulto",
+    "nome": "Sensor de dedo adulto (exemplo)",
+    "fabricante": "Exemplo",
+    "conector": "DB9",
+    "publico": "Adulto",
+    "layout": { "linhas": [5, 4] },
+    "verificado": false,
+    "fonte": "Dado fictício para demonstração",
+    "pinos": [
+      { "n": 1, "tipo": "led", "rotulo": "LED vermelho (A) / LED IV (K)", "fio": "Branco" },
+      { "n": 2, "tipo": "led", "rotulo": "LED vermelho (K) / LED IV (A)", "fio": "Marrom" },
+      { "n": 3, "tipo": "nc", "rotulo": "Sem conexão", "fio": "" },
+      { "n": 4, "tipo": "id", "rotulo": "Resistor de identificação", "fio": "Cinza" },
+      { "n": 5, "tipo": "blindagem", "rotulo": "Malha / terra", "fio": "Malha" },
+      { "n": 6, "tipo": "fotodiodo", "rotulo": "Fotodiodo (A)", "fio": "Verde" },
+      { "n": 7, "tipo": "fotodiodo", "rotulo": "Fotodiodo (K)", "fio": "Azul" },
+      { "n": 8, "tipo": "nc", "rotulo": "Sem conexão", "fio": "" },
+      { "n": 9, "tipo": "nc", "rotulo": "Sem conexão", "fio": "" }
+    ],
+    "testes": [
+      { "de": "1", "para": "2", "modo": "Diodo", "esperado": "Um LED conduz nesta polaridade (valor típico 1,5 a 2,0 V). Registre o seu." },
+      { "de": "2", "para": "1", "modo": "Diodo", "esperado": "O outro LED conduz na polaridade invertida. Registre o seu." },
+      { "de": "6", "para": "7", "modo": "Diodo", "esperado": "Fotodiodo conduz em um sentido e bloqueia no outro (OL)." },
+      { "de": "4", "para": "5", "modo": "Ohm", "esperado": "Valor do resistor de identificação. Registre o seu." }
+    ],
+    "ponto_solda": "Fios finos do cabo: confira a cor do fio com a coluna “Fio” antes de aquecer. Use pouca solda e ferro com temperatura controlada.",
+    "notas": "Ficha de exemplo. Ao medir, anote a data, o multímetro usado e o modelo do monitor."
+  },
+  {
+    "id": "exemplo-db15-neonatal",
+    "nome": "Sensor neonatal reutilizável (exemplo)",
+    "fabricante": "Exemplo",
+    "conector": "DB15",
+    "publico": "Neonatal",
+    "layout": { "linhas": [8, 7] },
+    "verificado": false,
+    "fonte": "Dado fictício para demonstração",
+    "pinos": [
+      { "n": 1, "tipo": "led-verm", "rotulo": "LED vermelho (A)", "fio": "Vermelho" },
+      { "n": 2, "tipo": "led-verm", "rotulo": "LED vermelho (K)", "fio": "Preto" },
+      { "n": 3, "tipo": "led-iv", "rotulo": "LED IV (A)", "fio": "Amarelo" },
+      { "n": 4, "tipo": "led-iv", "rotulo": "LED IV (K)", "fio": "Laranja" },
+      { "n": 5, "tipo": "nc", "rotulo": "Sem conexão", "fio": "" },
+      { "n": 6, "tipo": "nc", "rotulo": "Sem conexão", "fio": "" },
+      { "n": 7, "tipo": "blindagem", "rotulo": "Malha / terra", "fio": "Malha" },
+      { "n": 8, "tipo": "nc", "rotulo": "Sem conexão", "fio": "" },
+      { "n": 9, "tipo": "fotodiodo", "rotulo": "Fotodiodo (A)", "fio": "Verde" },
+      { "n": 10, "tipo": "fotodiodo", "rotulo": "Fotodiodo (K)", "fio": "Azul" },
+      { "n": 11, "tipo": "id", "rotulo": "Identificação (EEPROM)", "fio": "Branco" },
+      { "n": 12, "tipo": "nc", "rotulo": "Sem conexão", "fio": "" },
+      { "n": 13, "tipo": "nc", "rotulo": "Sem conexão", "fio": "" },
+      { "n": 14, "tipo": "nc", "rotulo": "Sem conexão", "fio": "" },
+      { "n": 15, "tipo": "nc", "rotulo": "Sem conexão", "fio": "" }
+    ],
+    "testes": [
+      { "de": "1", "para": "2", "modo": "Diodo", "esperado": "LED vermelho conduz (típico 1,6 a 2,0 V)." },
+      { "de": "3", "para": "4", "modo": "Diodo", "esperado": "LED IV conduz (típico 1,1 a 1,5 V). Multímetro não mostra a luz, use câmera de celular." },
+      { "de": "9", "para": "10", "modo": "Diodo", "esperado": "Fotodiodo conduz em um sentido e bloqueia no outro." }
+    ],
+    "ponto_solda": "Pinos de ponta fina: fixe o conector em um suporte e solde fileira por fileira, da menor para a maior numeração.",
+    "notas": "Ficha de exemplo."
+  }
+]
+</script>
+
+<script>
+let DADOS = [];
+try { DADOS = JSON.parse(document.getElementById("dados").textContent); }
+catch (e) { document.getElementById("ficha").innerHTML = '<p class="vazio-msg">Erro no JSON dos dados: ' + e.message + '</p>'; }
+
+const TIPOS = {
+  "led-verm": ["LED vermelho", "var(--red)"],
+  "led-iv":   ["LED infravermelho", "var(--ir)"],
+  "led":      ["LEDs em antiparalelo", "var(--led)"],
+  "fotodiodo":["Fotodiodo (receptor)", "var(--pd)"],
+  "blindagem":["Blindagem / terra", "var(--shield)"],
+  "id":       ["Identificação", "var(--id)"],
+  "nc":       ["Sem conexão", "none"]
+};
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const norm = s => String(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+const estado = { id: null, espelho: false, pino: null };
+
+function preencherFiltros() {
+  for (const [sel, campo] of [["fPublico","publico"],["fConector","conector"]]) {
+    [...new Set(DADOS.map(d => d[campo]))].sort().forEach(v => $(sel).insertAdjacentHTML("beforeend", `<option>${esc(v)}</option>`));
+  }
+}
+
+function filtrar() {
+  const q = norm($("busca").value.trim());
+  return DADOS.filter(d =>
+    (!$("fPublico").value || d.publico === $("fPublico").value) &&
+    (!$("fConector").value || d.conector === $("fConector").value) &&
+    (!q || norm(JSON.stringify(d)).includes(q)));
+}
+
+function desenharLista() {
+  const r = filtrar();
+  $("lista").innerHTML = r.map(d => `<li><button data-id="${esc(d.id)}" ${d.id === estado.id ? 'aria-current="true"' : ""}>
+    <strong>${esc(d.nome)}</strong>
+    <small>${esc(d.fabricante)} · ${esc(d.conector)} · ${esc(d.publico)}</small>
+    <span class="tag ${d.verificado ? "ok" : "ex"}">${d.verificado ? "verificado" : "não verificado"}</span></button></li>`).join("");
+  $("contagem").textContent = r.length + " de " + DADOS.length + " fichas";
+  if (!r.length) $("lista").innerHTML = '<li class="vazio-msg">Nenhuma ficha encontrada. Tente outro termo ou limpe os filtros.</li>';
+}
+
+function svgConector(d) {
+  const linhas = d.layout.linhas, cols = Math.max(...linhas), pitch = 42, m = 44;
+  const W = cols * pitch + m * 2, H = linhas.length * 52 + 56;
+  const porN = Object.fromEntries(d.pinos.map(p => [p.n, p]));
+  let n = 1, pinos = "";
+  linhas.forEach((qtd, r) => {
+    const off = (cols - qtd) * pitch / 2;
+    for (let i = 0; i < qtd; i++, n++) {
+      let x = m + pitch / 2 + off + i * pitch;
+      if (estado.espelho) x = W - x;
+      const y = 44 + r * 52, p = porN[n], t = p ? p.tipo : "nc", cor = TIPOS[t][1];
+      pinos += `<g class="pin ${t === "nc" ? "vazio" : ""} ${estado.pino === n ? "sel" : ""}" data-n="${n}" tabindex="0" role="button" aria-label="Pino ${n}: ${esc(p ? p.rotulo : "")}">
+        <title>Pino ${n}: ${esc(p ? p.rotulo : "")}</title>
+        <circle cx="${x}" cy="${y}" r="${estado.pino === n ? 17 : 15}" fill="${cor}" fill-opacity="${t === "nc" ? 0 : 1}"/>
+        <text x="${x}" y="${y + 4}" text-anchor="middle">${n}</text></g>`;
+    }
+  });
+  const inset = linhas.length > 1 ? 16 : 0;
+  const shell = `M ${14} 14 H ${W - 14} L ${W - 14 - inset} ${H - 14} H ${14 + inset} Z`;
+  return `<svg viewBox="0 0 ${W} ${H}" width="${Math.min(W, 520)}" role="img" aria-label="Diagrama de pinos do conector ${esc(d.conector)}">
+    <path d="${shell}" fill="var(--shell)" stroke="var(--ink)" stroke-width="2" stroke-linejoin="round"/>${pinos}</svg>`;
+}
+
+function desenharFicha() {
+  const d = DADOS.find(x => x.id === estado.id);
+  if (!d) { $("ficha").innerHTML = '<p class="vazio-msg">Escolha um sensor na lista para ver a posição dos pinos e como testar.</p>'; return; }
+  const usados = [...new Set(d.pinos.map(p => p.tipo))];
+  $("ficha").innerHTML = `
+    <h2>${esc(d.nome)}</h2>
+    <div class="meta">${esc(d.fabricante)} · ${esc(d.conector)} · ${esc(d.publico)}
+      <span class="tag ${d.verificado ? "ok" : "ex"}" style="margin-left:6px">${d.verificado ? "verificado na bancada" : "não verificado"}</span></div>
+    <div class="tools" role="group" aria-label="Lado de visualização">
+      <button aria-pressed="${!estado.espelho}" data-vista="frente">Vista frontal (pinos)</button>
+      <button aria-pressed="${estado.espelho}" data-vista="solda">Lado da solda (espelhado)</button>
+    </div>
+    <div class="diagrama">${svgConector(d)}</div>
+    <div class="leg">${usados.map(t => `<span><i style="background:${TIPOS[t][1]};${t === "nc" ? "border:1.5px solid var(--ink)" : ""}"></i>${TIPOS[t][0]}</span>`).join("")}</div>
+    <h3>Pinos</h3>
+    <div class="tbl"><table><thead><tr><th>Pino</th><th>Função</th><th>Fio</th></tr></thead><tbody>
+      ${d.pinos.map(p => `<tr data-n="${p.n}" class="${estado.pino === p.n ? "sel" : ""}"><td class="mono">${p.n}</td><td>${esc(p.rotulo)}</td><td>${esc(p.fio)}</td></tr>`).join("")}
+    </tbody></table></div>
+    <h3>Como testar</h3>
+    <div class="tbl"><table><thead><tr><th>Ponta +</th><th>Ponta −</th><th>Modo</th><th>Esperado</th></tr></thead><tbody>
+      ${d.testes.map(t => `<tr><td class="mono">${esc(t.de)}</td><td class="mono">${esc(t.para)}</td><td>${esc(t.modo)}</td><td>${esc(t.esperado)}</td></tr>`).join("")}
+    </tbody></table></div>
+    ${d.ponto_solda ? `<h3>Ponto de solda</h3><p>${esc(d.ponto_solda)}</p>` : ""}
+    ${d.notas ? `<h3>Notas</h3><p>${esc(d.notas)}</p>` : ""}
+    <p class="meta">Fonte: ${esc(d.fonte || "não informada")}</p>`;
+}
+
+function selecionar(id) {
+  estado.id = id; estado.pino = null;
+  history.replaceState(null, "", "#" + id);
+  desenharLista(); desenharFicha();
+}
+
+$("lista").addEventListener("click", e => { const b = e.target.closest("button[data-id]"); if (b) selecionar(b.dataset.id); });
+$("ficha").addEventListener("click", e => {
+  const v = e.target.closest("[data-vista]");
+  if (v) { estado.espelho = v.dataset.vista === "solda"; return desenharFicha(); }
+  const p = e.target.closest("[data-n]");
+  if (p) { estado.pino = +p.dataset.n; desenharFicha(); }
+});
+$("ficha").addEventListener("keydown", e => {
+  if ((e.key === "Enter" || e.key === " ") && e.target.matches(".pin")) { e.preventDefault(); estado.pino = +e.target.dataset.n; desenharFicha(); }
+});
+["busca", "fPublico", "fConector"].forEach(id => $(id).addEventListener("input", desenharLista));
+
+$("modelo").addEventListener("click", async () => {
+  const modelo = { id: "marca-modelo", nome: "", fabricante: "", conector: "DB9", publico: "Adulto",
+    layout: { linhas: [5, 4] }, verificado: false, fonte: "",
+    pinos: [{ n: 1, tipo: "led", rotulo: "", fio: "" }],
+    testes: [{ de: "1", para: "2", modo: "Diodo", esperado: "" }], ponto_solda: "", notas: "" };
+  try { await navigator.clipboard.writeText(JSON.stringify(modelo, null, 2)); $("modelo").textContent = "Modelo copiado"; }
+  catch { $("modelo").textContent = "Não foi possível copiar"; }
+  setTimeout(() => $("modelo").textContent = "Copiar modelo de nova ficha", 2000);
+});
+
+preencherFiltros();
+const inicial = location.hash.slice(1);
+estado.id = DADOS.some(d => d.id === inicial) ? inicial : null;
+desenharLista(); desenharFicha();
+</script>
+</body>
+</html>
