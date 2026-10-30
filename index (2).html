@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bancada SpO₂ – pinagem de conectores</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EEF1EE; --panel:#FAFBFA; --ink:#17262B; --muted:#5B6B70; --line:#C9D2CF;
+  --shell:#D5DBD9; --accent:#1F6F5C;
+  --led:#E07B00; --red:#D6362B; --ir:#7A3FB5; --pd:#1F7A8C; --shield:#6B7780; --id:#B58900; --nc:#9AA3A8;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#101719; --panel:#182225; --ink:#E4ECEA; --muted:#93A5A8; --line:#2C3B3F;
+    --shell:#2A3A3E; --accent:#4DBB9F;
+    --led:#F0A03A; --red:#F0675C; --ir:#B28AE0; --pd:#4DB7CA; --shield:#98A6AD; --id:#D9B440; --nc:#6F7E83;
+    color-scheme:dark;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.5 "IBM Plex Sans",system-ui,sans-serif;
+  padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}
+.mono{font-family:"IBM Plex Mono",ui-monospace,monospace}
+header{padding:20px 20px 12px;max-width:1200px;margin:0 auto}
+h1{font-size:1.5rem;margin:0 0 4px;font-weight:600}
+header p{margin:0;color:var(--muted);max-width:60ch}
+.warn{max-width:1160px;margin:8px auto 0;padding:10px 14px;border-left:4px solid var(--led);background:var(--panel);font-size:.9rem}
+main{max-width:1200px;margin:16px auto;padding:0 20px 40px;display:grid;grid-template-columns:320px 1fr;gap:20px;align-items:start}
+@media(max-width:820px){main{grid-template-columns:1fr}}
+aside,.ficha{background:var(--panel);border:1px solid var(--line);border-radius:6px}
+aside{padding:14px;position:sticky;top:8px}
+@media(max-width:820px){aside{position:static}}
+input,select,button{font:inherit;color:inherit}
+input[type=search],select{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:4px;background:var(--bg);margin-bottom:8px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#lista{list-style:none;margin:8px 0 0;padding:0;max-height:60vh;overflow:auto}
+#lista button{display:block;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--line);padding:10px 6px;cursor:pointer}
+#lista button[aria-current=true]{background:var(--bg);box-shadow:inset 3px 0 var(--accent)}
+#lista small{color:var(--muted);display:block}
+.tag{display:inline-block;font-size:.75rem;padding:1px 7px;border:1px solid var(--line);border-radius:10px;margin-right:4px;color:var(--muted)}
+.tag.ok{border-color:var(--accent);color:var(--accent)}
+.tag.ex{border-color:var(--led);color:var(--led)}
+.ficha{padding:20px}
+.ficha h2{margin:0 0 4px;font-size:1.3rem}
+.meta{color:var(--muted);margin-bottom:12px}
+.tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0}
+.tools button,.btn{padding:7px 12px;border:1px solid var(--line);background:var(--bg);border-radius:4px;cursor:pointer}
+.tools button[aria-pressed=true]{border-color:var(--accent);color:var(--accent);font-weight:600}
+.diagrama{overflow-x:auto;border:1px solid var(--line);border-radius:6px;padding:8px;background:var(--bg)}
+svg{display:block;margin:0 auto;max-width:100%;height:auto}
+.pin{cursor:pointer}
+.campo{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:4px;background:var(--bg);margin:4px 0 8px;font:inherit;color:inherit}
+textarea.campo{min-height:70px;resize:vertical}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:2px 14px}
+.grid2 label,.pinpanel label,label.bloco{display:block;font-size:.85rem;color:var(--muted)}
+.nlayout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;margin:12px 0}
+@media(max-width:820px){.nlayout{grid-template-columns:1fr}}
+.pinpanel{border:1px solid var(--line);border-radius:6px;padding:12px;background:var(--bg)}
+.msg{min-height:1.4em;color:var(--accent);font-weight:600}
+.btn.primario{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:600}
+.casca{fill:var(--shell);stroke:var(--ink);stroke-width:2;stroke-linejoin:round}
+.chave{font:11px "IBM Plex Sans",sans-serif;fill:var(--muted)}
+.tools select{width:auto;margin:0}
+.num{width:90px;padding:7px;border:1px solid var(--line);border-radius:4px;background:var(--bg)}
+.editor{max-width:1160px;margin:0 auto 24px;width:calc(100% - 40px)}
+.editor summary{cursor:pointer}
+#edCanvas{cursor:crosshair}
+#edJson{width:100%;min-height:70px;font:13px "IBM Plex Mono",monospace;background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:8px;color:var(--ink)}
+.pin circle{stroke:var(--ink);stroke-width:1.5;transition:r .12s}
+.pin.sel circle,.pin:hover circle{stroke-width:3.5}
+.pin text{font:600 12px "IBM Plex Mono",monospace;fill:#fff;pointer-events:none}
+.pin.vazio text{fill:var(--ink)}
+.leg{display:flex;flex-wrap:wrap;gap:6px 16px;margin:10px 0;font-size:.85rem}
+.leg i{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+h3{font-size:1rem;margin:22px 0 6px}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.92rem}
+th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:600;font-size:.82rem}
+tr.sel{background:var(--bg);box-shadow:inset 3px 0 var(--accent)}
+tbody tr[data-n]{cursor:pointer}
+.vazio-msg{color:var(--muted);padding:30px 10px;text-align:center}
+footer{max-width:1200px;margin:0 auto;padding:0 20px 30px;color:var(--muted);font-size:.85rem}
+</style>
+</head>
+<body>
+<header>
+  <h1>Bancada SpO₂: pinagem de conectores</h1>
+  <p>Consulte onde soldar e como testar o LED vermelho, o LED infravermelho e o fotodiodo de cada sensor.</p>
+</header>
+<div class="warn"><strong>Dados de exemplo.</strong> As fichas abaixo mostram o formato e não vieram de medições reais. Substitua pelos seus conectores e marque “verificado” só depois de testar na bancada.</div>
+
+<main>
+  <aside>
+    <input type="search" id="busca" placeholder="Buscar modelo, pino, cor do fio…" aria-label="Buscar">
+    <select id="fPublico" aria-label="Filtrar por público"><option value="">Todos os públicos</option></select>
+    <select id="fConector" aria-label="Filtrar por conector"><option value="">Todos os conectores</option></select>
+    <ul id="lista"></ul>
+    <p class="meta" id="contagem" style="margin:8px 0 0"></p>
+    <button class="btn" id="novoBtn" style="margin-top:10px;width:100%"><strong>+ Novo sensor</strong></button>
+    <button class="btn" id="modelo" style="margin-top:10px">Copiar modelo de nova ficha</button>
+  </aside>
+  <section class="ficha" id="ficha" aria-live="polite"></section>
+</main>
+<details class="ficha editor" id="novo">
+  <summary><strong>Cadastrar ou editar sensor</strong></summary>
+  <p class="meta">1) Preencha os dados · 2) escolha o layout do conector · 3) clique em cada pino e diga o que ele é · 4) salve.</p>
+  <div class="grid2">
+    <label>Nome do sensor<input class="campo" type="text" id="nNome" placeholder="Ex.: Sensor de dedo adulto DS-100A"></label>
+    <label>Fabricante<input class="campo" type="text" id="nFab"></label>
+    <label>Conector (texto livre)<input class="campo" type="text" id="nConector" placeholder="Ex.: DB9"></label>
+    <label>Público<select class="campo" id="nPublico"><option>Adulto</option><option>Pediátrico</option><option>Neonatal</option><option>Outro</option></select></label>
+    <label>Layout do conector<select class="campo" id="nLayout"></select></label>
+    <label>Fonte da informação<input class="campo" type="text" id="nFonte" placeholder="Medição própria, manual do fabricante…"></label>
+  </div>
+  <label class="bloco"><input type="checkbox" id="nVerif"> Verificado na bancada</label>
+  <div class="nlayout">
+    <div>
+      <div class="diagrama" id="nCanvas"></div>
+      <div class="leg" id="nLeg"></div>
+      <div class="tbl"><table><thead><tr><th>Pino</th><th>Função</th><th>Fio</th></tr></thead><tbody id="nPinTab"></tbody></table></div>
+    </div>
+    <div class="pinpanel" aria-live="polite">
+      <p class="meta" id="nPinTitulo" style="margin:0 0 8px">Clique em um pino no desenho para definir a função dele.</p>
+      <div id="nPinCampos" hidden>
+        <label>Função do pino<select class="campo" id="pTipo"></select></label>
+        <label>O que é (descrição)<input class="campo" type="text" id="pRotulo" placeholder="Ex.: LED vermelho (ânodo)" disabled></label>
+        <label>Cor do fio<input class="campo" type="text" id="pFio" placeholder="Ex.: Branco" disabled></label>
+        <div class="tools"><button id="pProx">Próximo pino ›</button><button id="pLimpar">Limpar pino</button></div>
+      </div>
+    </div>
+  </div>
+  <h3>Testes com multímetro</h3>
+  <div class="tbl"><table><thead><tr><th>Ponta +</th><th>Ponta −</th><th>Modo</th><th>Esperado</th><th></th></tr></thead><tbody id="nTestes"></tbody></table></div>
+  <div class="tools"><button id="nAddTeste">+ Adicionar teste</button></div>
+  <div class="grid2">
+    <label>Ponto de solda (observações)<textarea class="campo" id="nSolda"></textarea></label>
+    <label>Notas<textarea class="campo" id="nNotas"></textarea></label>
+  </div>
+  <div class="tools">
+    <button class="btn primario" id="nSalvar">Salvar sensor</button>
+    <button id="nCopiarFicha">Copiar JSON desta ficha</button>
+    <button id="nLimpar">Limpar formulário</button>
+  </div>
+  <p class="msg" id="nMsg" aria-live="polite"></p>
+  <h3>Publicar ou guardar as fichas</h3>
+  <p class="meta">As fichas salvas ficam só neste navegador. Para colocá-las no site publicado, gere o trecho e cole no <code>index.html</code>. Para levar a outro computador, use o backup.</p>
+  <div class="tools">
+    <button id="nTrecho">Gerar trecho para publicar</button>
+    <button id="nBackup">Gerar backup (JSON)</button>
+    <button id="nImportar">Importar JSON do campo</button>
+  </div>
+  <textarea id="nJson" aria-label="JSON de fichas" style="width:100%;min-height:90px;font:13px 'IBM Plex Mono',monospace;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:8px"></textarea>
+</details>
+
+<details class="ficha editor" id="editor">
+  <summary><strong>Criar layout livre</strong></summary>
+  <p class="meta">Escolha a forma e clique no desenho para posicionar os pinos, na ordem da numeração. Depois copie o JSON, cole no bloco “layouts” com um nome e use esse nome na ficha.</p>
+  <div class="tools">
+    <label>Forma <select id="edForma"><option value="retangulo">Retângulo</option><option value="circulo">Círculo</option><option value="d">D</option></select></label>
+    <label>Largura <input class="num" type="number" id="edW" value="240" min="120" max="480" step="10"></label>
+    <label>Altura <input class="num" type="number" id="edH" value="160" min="100" max="400" step="10"></label>
+    <button id="edDesfazer">Desfazer último pino</button>
+    <button id="edLimpar">Limpar</button>
+    <label>Nome do layout <input class="num" style="width:170px" type="text" id="edNome" placeholder="ex.: masimo-lncs"></label>
+    <button id="edSalvar">Salvar layout</button>
+  </div>
+  <div class="diagrama" id="edCanvas"></div>
+  <p class="meta" id="edMsg" aria-live="polite"></p>
+  <h3>JSON do layout</h3>
+  <textarea id="edJson" readonly aria-label="JSON do layout"></textarea>
+  <div class="tools"><button id="edCopiar">Copiar JSON</button></div>
+</details>
+<footer>Para adicionar um conector, edite os blocos JSON de layouts e dados e salve o arquivo.</footer>
+
+<!-- ===================== LAYOUTS E DADOS (edite aqui) =====================
+ Cada sensor aponta para um layout pelo nome ("layout": "db9") ou traz o layout direto na ficha.
+ Os layouts nomeados ficam no bloco "layouts", logo abaixo, e podem ser usados por vários sensores.
+ Tipos de layout:
+   "linhas"  (D-sub)  {"linhas":[5,4]}  pinos por fileira, de cima para baixo. Opções: "passo", "afunilamento".
+   "redondo"          {"tipo":"redondo","pinos":6,"centro":true}  numeração horária a partir da chave (topo).
+                      Opções: "rotacao" (graus), "sentido":"anti", "chave":false,
+                      "aneis":[{"pinos":8,"raio":80},{"pinos":4,"raio":40}] para anéis concêntricos.
+   "livre"            {"tipo":"livre","largura":240,"altura":140,"forma":"retangulo","pinos":[{"n":1,"x":50,"y":45}]}
+                      formas: retangulo, circulo, d, caminho (use "caminho":"M ... Z"). "chaves":[{"x":120,"y":22,"texto":"cabo"}].
+                      Use a ferramenta "Criar layout livre" no fim da página para gerar este JSON clicando.
+ Tipo do pino: led-verm | led-iv | led (LEDs em antiparalelo) | fotodiodo | blindagem | id | nc
+-->
+<script id="dados" type="application/json">
+[
+  {
+    "id": "exemplo-db9-adulto",
+    "nome": "Sensor de dedo adulto (exemplo)",
+    "fabricante": "Exemplo",
+    "conector": "DB9",
+    "publico": "Adulto",
+    "layout": "db9",
+    "verificado": false,
+    "fonte": "Dado fictício para demonstração",
+    "pinos": [
+      { "n": 1, "tipo": "led", "rotulo": "LED vermelho (A) / LED IV (K)", "fio": "Branco" },
+      { "n": 2, "tipo": "led", "rotulo": "LED vermelho (K) / LED IV (A)", "fio": "Marrom" },
+      { "n": 3, "tipo": "nc", "rotulo": "Sem conexão", "fio": "" },
+      { "n": 4, "tipo": "id", "rotulo": "Resistor de identificação", "fio": "Cinza" },
+      { "n": 5, "tipo": "blindagem", "rotulo": "Malha / terra", "fio": "Malha" },
+      { "n": 6, "tipo": "fotodiodo", "rotulo": "Fotodiodo (A)", "fio": "Verde" },
+      { "n": 7, "tipo": "fotodiodo", "rotulo": "Fotodiodo (K)", "fio": "Azul" },
+      { "n": 8, "tipo": "nc", "rotulo": "Sem conexão", "fio": "" },
+      { "n": 9, "tipo": "nc", "rotulo": "Sem conexão", "fio": "" }
+    ],
+    "testes": [
+      { "de": "1", "para": "2", "modo": "Diodo", "esperado": "Um LED conduz nesta polaridade (valor típico 1,5 a 2,0 V). Registre o seu." },
+      { "de": "2", "para": "1", "modo": "Diodo", "esperado": "O outro LED conduz na polaridade invertida. Registre o seu." },
+      { "de": "6", "para": "7", "modo": "Diodo", "esperado": "Fotodiodo conduz em um sentido e bloqueia no outro (OL)." },
+      { "de": "4", "para": "5", "modo": "Ohm", "esperado": "Valor do resistor de identificação. Registre o seu." }
+    ],
+    "ponto_solda": "Fios finos do cabo: confira a cor do fio com a coluna “Fio” antes de aquecer. Use pouca solda e ferro com temperatura controlada.",
+    "notas": "Ficha de exemplo. Ao medir, anote a data, o multímetro usado e o modelo do monitor."
+  },
+  {
+    "id": "exemplo-db15-neonatal",
+    "nome": "Sensor neonatal reutilizável (exemplo)",
+    "fabricante": "Exemplo",
+    "conector": "DB15",
+    "publico": "Neonatal",
+    "layout": "db15",
+    "verificado": false,
+    "fonte": "Dado fictício para demonstração",
+    "pinos": [
+      { "n": 1, "tipo": "led-verm", "rotulo": "LED vermelho (A)", "fio": "Vermelho" },
+      { "n": 2, "tipo": "led-verm", "rotulo": "LED vermelho (K)", "fio": "Preto" },
+      { "n": 3, "tipo": "led-iv", "rotulo": "LED IV (A)", "fio": "Amarelo" },
+      { "n": 4, "tipo": "led-iv", "rotulo": "LED IV (K)", "fio": "Laranja" },
+      { "n": 5, "tipo": "nc", "rotulo": "Sem conexão", "fio": "" },
+      { "n": 6, "tipo": "nc", "rotulo": "Sem conexão", "fio": "" },
+      { "n": 7, "tipo": "blindagem", "rotulo": "Malha / terra", "fio": "Malha" },
+      { "n": 8, "tipo": "nc", "rotulo": "Sem conexão", "fio": "" },
+      { "n": 9, "tipo": "fotodiodo", "rotulo": "Fotodiodo (A)", "fio": "Verde" },
+      { "n": 10, "tipo": "fotodiodo", "rotulo": "Fotodiodo (K)", "fio": "Azul" },
+      { "n": 11, "tipo": "id", "rotulo": "Identificação (EEPROM)", "fio": "Branco" },
+      { "n": 12, "tipo": "nc", "rotulo": "Sem conexão", "fio": "" },
+      { "n": 13, "tipo": "nc", "rotulo": "Sem conexão", "fio": "" },
+      { "n": 14, "tipo": "nc", "rotulo": "Sem conexão", "fio": "" },
+      { "n": 15, "tipo": "nc", "rotulo": "Sem conexão", "fio": "" }
+    ],
+    "testes": [
+      { "de": "1", "para": "2", "modo": "Diodo", "esperado": "LED vermelho conduz (típico 1,6 a 2,0 V)." },
+      { "de": "3", "para": "4", "modo": "Diodo", "esperado": "LED IV conduz (típico 1,1 a 1,5 V). Multímetro não mostra a luz, use câmera de celular." },
+      { "de": "9", "para": "10", "modo": "Diodo", "esperado": "Fotodiodo conduz em um sentido e bloqueia no outro." }
+    ],
+    "ponto_solda": "Pinos de ponta fina: fixe o conector em um suporte e solde fileira por fileira, da menor para a maior numeração.",
+    "notas": "Ficha de exemplo."
+  },
+  {
+    "id": "exemplo-redondo-7",
+    "nome": "Sensor de dedo conector redondo (exemplo)",
+    "fabricante": "Exemplo",
+    "conector": "Redondo 7 pinos",
+    "publico": "Adulto",
+    "layout": "redondo-6-centro",
+    "verificado": false,
+    "fonte": "Dado fictício para demonstração",
+    "pinos": [
+      { "n": 1, "tipo": "led", "rotulo": "LED vermelho (A) / LED IV (K)", "fio": "Branco" },
+      { "n": 2, "tipo": "led", "rotulo": "LED vermelho (K) / LED IV (A)", "fio": "Marrom" },
+      { "n": 3, "tipo": "fotodiodo", "rotulo": "Fotodiodo (A)", "fio": "Verde" },
+      { "n": 4, "tipo": "fotodiodo", "rotulo": "Fotodiodo (K)", "fio": "Azul" },
+      { "n": 5, "tipo": "id", "rotulo": "Resistor de identificação", "fio": "Cinza" },
+      { "n": 6, "tipo": "nc", "rotulo": "Sem conexão", "fio": "" },
+      { "n": 7, "tipo": "blindagem", "rotulo": "Malha / terra (pino central)", "fio": "Malha" }
+    ],
+    "testes": [
+      { "de": "1", "para": "2", "modo": "Diodo", "esperado": "Um LED conduz nesta polaridade. Inverta as pontas para o outro. Registre os valores." },
+      { "de": "3", "para": "4", "modo": "Diodo", "esperado": "Fotodiodo conduz em um sentido e bloqueia no outro." }
+    ],
+    "ponto_solda": "Com a chave voltada para cima, os pinos 1 a 6 seguem no sentido horário, vistos de frente. O pino 7 é o central.",
+    "notas": "Ficha de exemplo. Confirme onde fica a chave e o sentido da numeração no conector real, pois cada fabricante define o seu."
+  },
+  {
+    "id": "exemplo-livre-5",
+    "nome": "Sensor de orelha conector retangular (exemplo)",
+    "fabricante": "Exemplo",
+    "conector": "Retangular 5 pinos",
+    "publico": "Pediátrico",
+    "layout": "orelha-5-livre",
+    "verificado": false,
+    "fonte": "Dado fictício para demonstração",
+    "pinos": [
+      { "n": 1, "tipo": "led", "rotulo": "LED vermelho (A) / LED IV (K)", "fio": "Branco" },
+      { "n": 2, "tipo": "led", "rotulo": "LED vermelho (K) / LED IV (A)", "fio": "Marrom" },
+      { "n": 3, "tipo": "fotodiodo", "rotulo": "Fotodiodo (A)", "fio": "Verde" },
+      { "n": 4, "tipo": "fotodiodo", "rotulo": "Fotodiodo (K)", "fio": "Azul" },
+      { "n": 5, "tipo": "blindagem", "rotulo": "Malha / terra", "fio": "Malha" }
+    ],
+    "testes": [
+      { "de": "1", "para": "2", "modo": "Diodo", "esperado": "Um LED conduz; inverta as pontas para o outro. Registre os valores." }
+    ],
+    "ponto_solda": "Pinos em duas fileiras desalinhadas. Confira o desenho antes de soldar.",
+    "notas": "Ficha de exemplo que usa um layout livre."
+  }
+]
+</script>
+
+<script id="layouts" type="application/json">
+{
+  "db9": { "linhas": [5, 4] },
+  "db15": { "linhas": [8, 7] },
+  "redondo-6-centro": { "tipo": "redondo", "pinos": 6, "centro": true },
+  "orelha-5-livre": {
+    "tipo": "livre", "largura": 240, "altura": 140, "forma": "retangulo",
+    "pinos": [
+      { "n": 1, "x": 50, "y": 45 }, { "n": 2, "x": 120, "y": 45 }, { "n": 3, "x": 190, "y": 45 },
+      { "n": 4, "x": 85, "y": 100 }, { "n": 5, "x": 155, "y": 100 }
+    ],
+    "chaves": [{ "x": 120, "y": 22, "texto": "cabo" }]
+  }
+}
+</script>
+
+<script>
+let BASE = [], DADOS = [];
+try { BASE = JSON.parse(document.getElementById("dados").textContent); }
+catch (e) { document.getElementById("ficha").innerHTML = '<p class="vazio-msg">Erro no JSON dos dados: ' + e.message + '</p>'; }
+
+const guardar = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } };
+const ler = (k, pad) => { try { return JSON.parse(localStorage.getItem(k)) || pad; } catch (e) { return pad; } };
+let CUSTOM = ler("bancada:fichas", []);
+function recarregar() {
+  DADOS = BASE.concat(CUSTOM.filter(f => !BASE.some(b => b.id === f.id)).map(f => ({ ...f, _custom: true })));
+}
+recarregar();
+
+const TIPOS = {
+  "led-verm": ["LED vermelho", "var(--red)"],
+  "led-iv":   ["LED infravermelho", "var(--ir)"],
+  "led":      ["LEDs em antiparalelo", "var(--led)"],
+  "fotodiodo":["Fotodiodo (receptor)", "var(--pd)"],
+  "blindagem":["Blindagem / terra", "var(--shield)"],
+  "id":       ["Identificação", "var(--id)"],
+  "nc":       ["Sem conexão", "none"]
+};
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const norm = s => String(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+const estado = { id: null, espelho: false, pino: null };
+
+function preencherFiltros() {
+  for (const [sel, campo] of [["fPublico","publico"],["fConector","conector"]]) {
+    [...new Set(DADOS.map(d => d[campo]))].sort().forEach(v => $(sel).insertAdjacentHTML("beforeend", `<option>${esc(v)}</option>`));
+  }
+}
+
+function filtrar() {
+  const q = norm($("busca").value.trim());
+  return DADOS.filter(d =>
+    (!$("fPublico").value || d.publico === $("fPublico").value) &&
+    (!$("fConector").value || d.conector === $("fConector").value) &&
+    (!q || norm(JSON.stringify(d)).includes(q)));
+}
+
+function desenharLista() {
+  const r = filtrar();
+  $("lista").innerHTML = r.map(d => `<li><button data-id="${esc(d.id)}" ${d.id === estado.id ? 'aria-current="true"' : ""}>
+    <strong>${esc(d.nome)}</strong>
+    <small>${esc(d.fabricante)} · ${esc(d.conector)} · ${esc(d.publico)}</small>
+    <span class="tag ${d.verificado ? "ok" : "ex"}">${d.verificado ? "verificado" : "não verificado"}</span>${d._custom ? '<span class="tag">salvo aqui</span>' : ""}</button></li>`).join("");
+  $("contagem").textContent = r.length + " de " + DADOS.length + " fichas";
+  if (!r.length) $("lista").innerHTML = '<li class="vazio-msg">Nenhuma ficha encontrada. Tente outro termo ou limpe os filtros.</li>';
+}
+
+const LAYOUTS = (() => { try { return JSON.parse($("layouts").textContent); } catch (e) { return {}; } })();
+const LAYOUTS_BASE = { ...LAYOUTS };
+const LAYOUTS_CUSTOM = ler("bancada:layouts", {});
+Object.assign(LAYOUTS, LAYOUTS_CUSTOM);
+const arred = v => Math.round(v * 10) / 10;
+
+function marca(d, n, x, y) {
+  const p = d.pinos.find(q => q.n === n), t = p ? p.tipo : "nc", cor = TIPOS[t][1], sel = estado.pino === n;
+  return `<g class="pin ${t === "nc" ? "vazio" : ""} ${sel ? "sel" : ""}" data-n="${n}" tabindex="0" role="button" aria-label="Pino ${n}: ${esc(p ? p.rotulo : "")}">
+    <title>Pino ${n}: ${esc(p ? p.rotulo : "")}</title>
+    <circle cx="${arred(x)}" cy="${arred(y)}" r="${sel ? 17 : 15}" fill="${cor}" fill-opacity="${t === "nc" ? 0 : 1}"/>
+    <text x="${arred(x)}" y="${arred(y + 4)}" text-anchor="middle">${n}</text></g>`;
+}
+
+/* Cada tipo de layout devolve: largura/altura do desenho (W, H), tamanho na tela, a casca (forma),
+   a posição de cada pino e textos de referência (chaves). Para criar um tipo novo, adicione uma função aqui. */
+function layLinhas(L) {
+  const linhas = L.linhas, cols = Math.max(...linhas), pitch = L.passo || 42, m = 44, pinos = [];
+  const W = cols * pitch + m * 2, H = linhas.length * 52 + 56;
+  let n = 1;
+  linhas.forEach((qtd, r) => {
+    const off = (cols - qtd) * pitch / 2;
+    for (let i = 0; i < qtd; i++, n++) pinos.push({ n, x: m + pitch / 2 + off + i * pitch, y: 44 + r * 52 });
+  });
+  const inset = L.afunilamento ?? (linhas.length > 1 ? 16 : 0);
+  const forma = `<path d="M 14 14 H ${W - 14} L ${W - 14 - inset} ${H - 14} H ${14 + inset} Z" class="casca"/>`;
+  return { W, H, largura: Math.min(W, 520), forma, pinos, chaves: [] };
+}
+
+function layRedondo(L) {
+  const aneis = L.aneis || [{ pinos: L.pinos, raio: 66 }], W = 240, H = 240, cx = 120, cy = 120;
+  const dir = L.sentido === "anti" ? -1 : 1, pinos = [];
+  let n = 1;
+  aneis.forEach(a => {
+    for (let i = 0; i < a.pinos; i++, n++) {
+      const ang = (-90 + (L.rotacao || 0) + dir * (i + 0.5) * 360 / a.pinos) * Math.PI / 180;
+      pinos.push({ n, x: cx + a.raio * Math.cos(ang), y: cy + a.raio * Math.sin(ang) });
+    }
+  });
+  if (L.centro) pinos.push({ n, x: cx, y: cy });
+  const comChave = L.chave !== false;
+  const forma = `<circle cx="${cx}" cy="${cy}" r="102" class="casca"/>` +
+    (comChave ? `<rect x="${cx - 9}" y="8" width="18" height="14" rx="2" fill="var(--ink)"/>` : "");
+  return { W, H, largura: 300, forma, pinos, chaves: comChave ? [{ x: cx, y: 36, texto: "chave" }] : [] };
+}
+
+function layLivre(L) {
+  const W = L.largura || 240, H = L.altura || 160, f = L.forma || "retangulo";
+  let forma;
+  if (f === "circulo") forma = `<ellipse cx="${W / 2}" cy="${H / 2}" rx="${W / 2 - 10}" ry="${H / 2 - 10}" class="casca"/>`;
+  else if (f === "d") forma = `<path d="M 14 14 H ${W - 14} L ${W - 34} ${H - 14} H 34 Z" class="casca"/>`;
+  else if (f === "caminho" && L.caminho) forma = `<path d="${esc(L.caminho)}" class="casca"/>`;
+  else forma = `<rect x="10" y="10" width="${W - 20}" height="${H - 20}" rx="${L.raio ?? 10}" class="casca"/>`;
+  return { W, H, largura: Math.min(W, 520), forma, pinos: L.pinos || [], chaves: L.chaves || [] };
+}
+
+const TIPOS_LAYOUT = { linhas: layLinhas, redondo: layRedondo, livre: layLivre };
+
+function geometria(L) {
+  const f = TIPOS_LAYOUT[L.tipo || (L.linhas ? "linhas" : "")];
+  return f ? f(L) : null;
+}
+
+function montarSvg(g, pinosHtml, rotulo, espelho) {
+  const forma = espelho ? `<g transform="translate(${g.W} 0) scale(-1 1)">${g.forma}</g>` : g.forma;
+  const chaves = g.chaves.map(c => `<text x="${espelho ? g.W - c.x : c.x}" y="${c.y}" text-anchor="middle" class="chave">${esc(c.texto)}</text>`).join("");
+  return `<svg viewBox="0 0 ${g.W} ${g.H}" width="${g.largura}" role="img" aria-label="Diagrama de pinos: ${esc(rotulo)}">${forma}${chaves}${pinosHtml}</svg>`;
+}
+
+function svgConector(d) {
+  const L = typeof d.layout === "string" ? LAYOUTS[d.layout] : d.layout, g = L && geometria(L);
+  if (!g) return `<p class="vazio-msg">Layout “${esc(typeof d.layout === "string" ? d.layout : "")}” não encontrado ou de tipo desconhecido. Confira o bloco de layouts.</p>`;
+  const pinos = g.pinos.map(p => marca(d, p.n, estado.espelho ? g.W - p.x : p.x, p.y)).join("");
+  return montarSvg(g, pinos, d.conector, estado.espelho);
+}
+
+function desenharFicha() {
+  const d = DADOS.find(x => x.id === estado.id);
+  if (!d) { $("ficha").innerHTML = '<p class="vazio-msg">Escolha um sensor na lista para ver a posição dos pinos e como testar.</p>'; return; }
+  const usados = [...new Set(d.pinos.map(p => p.tipo))];
+  $("ficha").innerHTML = `
+    <h2>${esc(d.nome)}</h2>
+    <div class="meta">${esc(d.fabricante)} · ${esc(d.conector)} · ${esc(d.publico)}
+      <span class="tag ${d.verificado ? "ok" : "ex"}" style="margin-left:6px">${d.verificado ? "verificado na bancada" : "não verificado"}</span></div>
+    <div class="tools" role="group" aria-label="Lado de visualização">
+      <button aria-pressed="${!estado.espelho}" data-vista="frente">Vista frontal (pinos)</button>
+      <button aria-pressed="${estado.espelho}" data-vista="solda">Lado da solda (espelhado)</button>
+      <button data-acao="editar">${d._custom ? "Editar ficha" : "Editar como cópia"}</button>${d._custom ? '<button data-acao="excluir">Excluir</button>' : ""}
+    </div>
+    <div class="diagrama">${svgConector(d)}</div>
+    <div class="leg">${usados.map(t => `<span><i style="background:${TIPOS[t][1]};${t === "nc" ? "border:1.5px solid var(--ink)" : ""}"></i>${TIPOS[t][0]}</span>`).join("")}</div>
+    <h3>Pinos</h3>
+    <div class="tbl"><table><thead><tr><th>Pino</th><th>Função</th><th>Fio</th></tr></thead><tbody>
+      ${d.pinos.map(p => `<tr data-n="${p.n}" class="${estado.pino === p.n ? "sel" : ""}"><td class="mono">${p.n}</td><td>${esc(p.rotulo)}</td><td>${esc(p.fio)}</td></tr>`).join("")}
+    </tbody></table></div>
+    <h3>Como testar</h3>
+    <div class="tbl"><table><thead><tr><th>Ponta +</th><th>Ponta −</th><th>Modo</th><th>Esperado</th></tr></thead><tbody>
+      ${d.testes.map(t => `<tr><td class="mono">${esc(t.de)}</td><td class="mono">${esc(t.para)}</td><td>${esc(t.modo)}</td><td>${esc(t.esperado)}</td></tr>`).join("")}
+    </tbody></table></div>
+    ${d.ponto_solda ? `<h3>Ponto de solda</h3><p>${esc(d.ponto_solda)}</p>` : ""}
+    ${d.notas ? `<h3>Notas</h3><p>${esc(d.notas)}</p>` : ""}
+    <p class="meta">Fonte: ${esc(d.fonte || "não informada")}</p>`;
+}
+
+function selecionar(id) {
+  estado.id = id; estado.pino = null;
+  history.replaceState(null, "", "#" + id);
+  desenharLista(); desenharFicha();
+}
+
+$("lista").addEventListener("click", e => { const b = e.target.closest("button[data-id]"); if (b) selecionar(b.dataset.id); });
+$("ficha").addEventListener("click", e => {
+  const v = e.target.closest("[data-vista]");
+  if (v) { estado.espelho = v.dataset.vista === "solda"; return desenharFicha(); }
+  const p = e.target.closest("[data-n]");
+  if (p) { estado.pino = +p.dataset.n; desenharFicha(); }
+});
+$("ficha").addEventListener("keydown", e => {
+  if ((e.key === "Enter" || e.key === " ") && e.target.matches(".pin")) { e.preventDefault(); estado.pino = +e.target.dataset.n; desenharFicha(); }
+});
+["busca", "fPublico", "fConector"].forEach(id => $(id).addEventListener("input", desenharLista));
+
+$("modelo").addEventListener("click", async () => {
+  const modelo = { id: "marca-modelo", nome: "", fabricante: "", conector: "DB9", publico: "Adulto",
+    layout: { linhas: [5, 4] }, verificado: false, fonte: "",
+    pinos: [{ n: 1, tipo: "led", rotulo: "", fio: "" }],
+    testes: [{ de: "1", para: "2", modo: "Diodo", esperado: "" }], ponto_solda: "", notas: "" };
+  try { await navigator.clipboard.writeText(JSON.stringify(modelo, null, 2)); $("modelo").textContent = "Modelo copiado"; }
+  catch { $("modelo").textContent = "Não foi possível copiar"; }
+  setTimeout(() => $("modelo").textContent = "Copiar modelo de nova ficha", 2000);
+});
+
+/* Editor de layout livre */
+const ed = { pinos: [] };
+const layoutEd = () => ({ tipo: "livre", largura: +$("edW").value || 240, altura: +$("edH").value || 160, forma: $("edForma").value, pinos: ed.pinos });
+function desenharEditor() {
+  const L = layoutEd(), g = layLivre(L);
+  const marcas = ed.pinos.map(p => `<g class="pin"><circle cx="${p.x}" cy="${p.y}" r="15" fill="var(--accent)"/><text x="${p.x}" y="${p.y + 4}" text-anchor="middle">${p.n}</text></g>`).join("");
+  $("edCanvas").innerHTML = montarSvg(g, marcas, "editor de layout", false);
+  $("edJson").value = JSON.stringify(L);
+}
+$("edCanvas").addEventListener("click", e => {
+  const s = $("edCanvas").querySelector("svg"); if (!s) return;
+  const r = s.getBoundingClientRect(), vb = s.viewBox.baseVal;
+  const x = Math.round((e.clientX - r.left) * vb.width / r.width / 5) * 5;
+  const y = Math.round((e.clientY - r.top) * vb.height / r.height / 5) * 5;
+  if (ed.pinos.some(p => Math.hypot(p.x - x, p.y - y) < 18)) return;
+  ed.pinos.push({ n: ed.pinos.length + 1, x, y }); desenharEditor();
+});
+["edForma", "edW", "edH"].forEach(id => $(id).addEventListener("input", desenharEditor));
+$("edDesfazer").addEventListener("click", () => { ed.pinos.pop(); desenharEditor(); });
+$("edLimpar").addEventListener("click", () => { ed.pinos = []; desenharEditor(); });
+$("edCopiar").addEventListener("click", async () => {
+  try { await navigator.clipboard.writeText($("edJson").value); $("edCopiar").textContent = "JSON copiado"; }
+  catch { $("edJson").select(); $("edCopiar").textContent = "Selecionado: use Ctrl+C"; }
+  setTimeout(() => $("edCopiar").textContent = "Copiar JSON", 2500);
+});
+desenharEditor();
+
+/* ===== Formulário visual de novo sensor ===== */
+const nf = { pinos: {}, sel: null, testes: [], id: null, inlineKey: null };
+const MODOS = ["Diodo", "Ohm", "Continuidade", "Tensão"];
+const slug = t => norm(t).replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+const msg = (id, t) => { $(id).textContent = t; };
+async function copiarTexto(txt, btn) {
+  const o = btn.textContent;
+  try { await navigator.clipboard.writeText(txt); btn.textContent = "Copiado"; } catch (e) { btn.textContent = "Selecione e copie (Ctrl+C)"; }
+  setTimeout(() => btn.textContent = o, 2200);
+}
+function atualizarFiltros() {
+  for (const [sel, campo] of [["fPublico", "publico"], ["fConector", "conector"]]) {
+    const el = $(sel), v = el.value, primeira = el.options[0].outerHTML;
+    el.innerHTML = primeira + [...new Set(DADOS.map(d => d[campo]))].sort().map(x => `<option>${esc(x)}</option>`).join("");
+    el.value = v;
+  }
+}
+function opcoesLayout() {
+  const el = $("nLayout"), v = el.value;
+  el.innerHTML = Object.keys(LAYOUTS).map(k => `<option value="${esc(k)}">${esc(k)}</option>`).join("");
+  if (v && LAYOUTS[v]) el.value = v;
+}
+$("pTipo").innerHTML = '<option value="">— escolher —</option>' + Object.entries(TIPOS).map(([k, v]) => `<option value="${k}">${v[0]}</option>`).join("");
+$("nLeg").innerHTML = Object.entries(TIPOS).map(([k, v]) => `<span><i style="background:${v[1]};${k === "nc" ? "border:1.5px solid var(--ink)" : ""}"></i>${v[0]}</span>`).join("");
+
+const layoutAtual = () => { const L = LAYOUTS[$("nLayout").value]; return L ? geometria(L) : null; };
+
+function marcaForm(n, x, y) {
+  const f = nf.pinos[n], t = f ? f.tipo : "nc", sel = nf.sel === n;
+  return `<g class="pin ${t === "nc" ? "vazio" : ""} ${sel ? "sel" : ""}" data-n="${n}" tabindex="0" role="button" aria-label="Pino ${n}">
+    <title>Pino ${n}${f && f.rotulo ? ": " + esc(f.rotulo) : ""}</title>
+    <circle cx="${arred(x)}" cy="${arred(y)}" r="${sel ? 17 : 15}" fill="${TIPOS[t][1]}" fill-opacity="${t === "nc" ? 0 : 1}" ${f ? "" : 'stroke-dasharray="3 3"'}/>
+    <text x="${arred(x)}" y="${arred(y + 4)}" text-anchor="middle">${n}</text></g>`;
+}
+function desenharForm() {
+  const g = layoutAtual();
+  $("nCanvas").innerHTML = g ? montarSvg(g, g.pinos.map(p => marcaForm(p.n, p.x, p.y)).join(""), "novo sensor", false) : '<p class="vazio-msg">Escolha um layout.</p>';
+  $("nPinTab").innerHTML = (g ? g.pinos : []).map(p => {
+    const f = nf.pinos[p.n];
+    return `<tr data-n="${p.n}" class="${nf.sel === p.n ? "sel" : ""}"><td class="mono">${p.n}</td><td>${f ? esc(f.rotulo || TIPOS[f.tipo][0]) : '<span class="meta">não definido</span>'}</td><td>${f ? esc(f.fio) : ""}</td></tr>`;
+  }).join("");
+}
+function selecionarPino(n) {
+  nf.sel = n;
+  const f = nf.pinos[n];
+  $("nPinTitulo").innerHTML = "<strong>Pino " + n + "</strong>";
+  $("nPinCampos").hidden = false;
+  $("pTipo").value = f ? f.tipo : "";
+  $("pRotulo").value = f ? f.rotulo : "";
+  $("pFio").value = f ? f.fio : "";
+  $("pRotulo").disabled = $("pFio").disabled = !f;
+  desenharForm();
+}
+const clicaPino = e => { const p = e.target.closest("[data-n]"); if (p) selecionarPino(+p.dataset.n); };
+$("nCanvas").addEventListener("click", clicaPino);
+$("nPinTab").addEventListener("click", clicaPino);
+$("nCanvas").addEventListener("keydown", e => {
+  if ((e.key === "Enter" || e.key === " ") && e.target.matches(".pin")) { e.preventDefault(); selecionarPino(+e.target.dataset.n); }
+});
+$("pTipo").addEventListener("change", () => {
+  const n = nf.sel, t = $("pTipo").value;
+  if (n == null) return;
+  if (!t) delete nf.pinos[n];
+  else {
+    const f = nf.pinos[n] || { tipo: t, rotulo: "", fio: "" };
+    f.tipo = t;
+    if (!f.rotulo || Object.values(TIPOS).some(v => v[0] === f.rotulo)) f.rotulo = TIPOS[t][0];
+    nf.pinos[n] = f;
+    $("pRotulo").value = f.rotulo; $("pFio").value = f.fio;
+  }
+  $("pRotulo").disabled = $("pFio").disabled = !t;
+  desenharForm();
+});
+$("pRotulo").addEventListener("input", () => { const f = nf.pinos[nf.sel]; if (f) { f.rotulo = $("pRotulo").value; desenharForm(); } });
+$("pFio").addEventListener("input", () => { const f = nf.pinos[nf.sel]; if (f) { f.fio = $("pFio").value; desenharForm(); } });
+$("pProx").addEventListener("click", () => {
+  const g = layoutAtual(); if (!g) return;
+  const ns = g.pinos.map(p => p.n), i = ns.indexOf(nf.sel);
+  selecionarPino(ns[(i + 1) % ns.length]); $("pTipo").focus();
+});
+$("pLimpar").addEventListener("click", () => { delete nf.pinos[nf.sel]; selecionarPino(nf.sel); });
+$("nLayout").addEventListener("change", () => {
+  nf.sel = null; $("nPinCampos").hidden = true;
+  $("nPinTitulo").textContent = "Clique em um pino no desenho para definir a função dele.";
+  desenharForm(); desenharTestes();
+});
+
+function desenharTestes() {
+  const g = layoutAtual(), nums = g ? g.pinos.map(p => p.n) : [];
+  const op = v => nums.map(n => `<option ${String(n) === String(v) ? "selected" : ""}>${n}</option>`).join("");
+  $("nTestes").innerHTML = nf.testes.length ? nf.testes.map((t, i) => `<tr>
+    <td><select class="campo" data-t="${i}" data-c="de" aria-label="Ponta positiva">${op(t.de)}</select></td>
+    <td><select class="campo" data-t="${i}" data-c="para" aria-label="Ponta negativa">${op(t.para)}</select></td>
+    <td><select class="campo" data-t="${i}" data-c="modo" aria-label="Modo">${MODOS.map(m => `<option ${m === t.modo ? "selected" : ""}>${m}</option>`).join("")}</select></td>
+    <td><input class="campo" type="text" data-t="${i}" data-c="esperado" value="${esc(t.esperado)}" placeholder="O que deve aparecer no multímetro" aria-label="Valor esperado"></td>
+    <td><button data-rt="${i}" aria-label="Remover teste">×</button></td></tr>`).join("")
+    : '<tr><td colspan="5" class="meta">Nenhum teste. Use “Adicionar teste”.</td></tr>';
+}
+$("nTestes").addEventListener("input", e => { const el = e.target; if (el.dataset.t != null) nf.testes[+el.dataset.t][el.dataset.c] = el.value; });
+$("nTestes").addEventListener("click", e => { const b = e.target.closest("[data-rt]"); if (b) { nf.testes.splice(+b.dataset.rt, 1); desenharTestes(); } });
+$("nAddTeste").addEventListener("click", () => {
+  const g = layoutAtual(), ns = g ? g.pinos.map(p => p.n) : [];
+  nf.testes.push({ de: ns[0] ?? "", para: ns[1] ?? ns[0] ?? "", modo: "Diodo", esperado: "" });
+  desenharTestes();
+});
+
+function gerarId(nome) {
+  const base = slug(nome) || "sensor";
+  let id = base, k = 2;
+  while (BASE.some(b => b.id === id) || CUSTOM.some(c => c.id === id)) id = base + "-" + k++;
+  return id;
+}
+function fichaDoForm() {
+  const g = layoutAtual(), lk = $("nLayout").value, nome = $("nNome").value.trim();
+  const pinos = (g ? g.pinos.map(p => p.n) : []).filter(n => nf.pinos[n]).map(n => ({ n, tipo: nf.pinos[n].tipo, rotulo: nf.pinos[n].rotulo.trim(), fio: nf.pinos[n].fio.trim() }));
+  return {
+    id: nf.id || gerarId(nome), nome, fabricante: $("nFab").value.trim(), conector: $("nConector").value.trim() || "—",
+    publico: $("nPublico").value, layout: nf.inlineKey && lk === nf.inlineKey ? LAYOUTS[lk] : lk,
+    verificado: $("nVerif").checked, fonte: $("nFonte").value.trim(), pinos,
+    testes: nf.testes.filter(t => t.de !== "" && t.para !== "").map(t => ({ de: String(t.de), para: String(t.para), modo: t.modo, esperado: t.esperado.trim() })),
+    ponto_solda: $("nSolda").value.trim(), notas: $("nNotas").value.trim()
+  };
+}
+function limparForm() {
+  if (nf.inlineKey) delete LAYOUTS[nf.inlineKey];
+  Object.assign(nf, { pinos: {}, sel: null, testes: [], id: null, inlineKey: null });
+  ["nNome", "nFab", "nConector", "nFonte", "nSolda", "nNotas"].forEach(i => $(i).value = "");
+  $("nVerif").checked = false; $("nPublico").value = "Adulto";
+  $("nPinCampos").hidden = true;
+  $("nPinTitulo").textContent = "Clique em um pino no desenho para definir a função dele.";
+  opcoesLayout(); desenharForm(); desenharTestes(); msg("nMsg", "");
+}
+function abrirForm() { $("novo").open = true; $("novo").scrollIntoView({ behavior: "smooth" }); }
+function carregarNoForm(d) {
+  limparForm();
+  $("nNome").value = d.nome || ""; $("nFab").value = d.fabricante || ""; $("nConector").value = d.conector || "";
+  $("nPublico").value = d.publico || "Outro"; $("nFonte").value = d.fonte || ""; $("nVerif").checked = !!d.verificado;
+  $("nSolda").value = d.ponto_solda || ""; $("nNotas").value = d.notas || "";
+  nf.id = d._custom ? d.id : null;
+  if (typeof d.layout === "object") { nf.inlineKey = "(layout desta ficha)"; LAYOUTS[nf.inlineKey] = d.layout; }
+  opcoesLayout();
+  $("nLayout").value = typeof d.layout === "string" ? d.layout : nf.inlineKey;
+  nf.pinos = Object.fromEntries((d.pinos || []).map(p => [p.n, { tipo: p.tipo, rotulo: p.rotulo || "", fio: p.fio || "" }]));
+  nf.testes = (d.testes || []).map(t => ({ ...t }));
+  desenharForm(); desenharTestes();
+  msg("nMsg", d._custom ? "Editando ficha salva. Ao salvar, ela é atualizada." : "Editando uma cópia. Ao salvar, vira uma ficha nova.");
+  abrirForm();
+}
+$("nSalvar").addEventListener("click", () => {
+  const f = fichaDoForm();
+  if (!f.nome) return msg("nMsg", "Digite o nome do sensor.");
+  if (!f.pinos.length) return msg("nMsg", "Defina ao menos um pino: clique nele no desenho.");
+  const i = CUSTOM.findIndex(x => x.id === f.id);
+  if (i >= 0) CUSTOM[i] = f; else CUSTOM.push(f);
+  const ok = guardar("bancada:fichas", CUSTOM);
+  recarregar(); atualizarFiltros(); nf.id = f.id; selecionar(f.id);
+  msg("nMsg", ok ? "Sensor salvo neste navegador." : "Não foi possível salvar neste navegador. Use “Copiar JSON desta ficha”.");
+});
+$("nCopiarFicha").addEventListener("click", () => copiarTexto(JSON.stringify(fichaDoForm(), null, 2), $("nCopiarFicha")));
+$("nLimpar").addEventListener("click", limparForm);
+$("novoBtn").addEventListener("click", () => { limparForm(); abrirForm(); });
+
+$("ficha").addEventListener("click", e => {
+  const a = e.target.closest("[data-acao]"); if (!a) return;
+  const d = DADOS.find(x => x.id === estado.id); if (!d) return;
+  if (a.dataset.acao === "editar") carregarNoForm(d);
+  if (a.dataset.acao === "excluir" && confirm("Excluir esta ficha salva neste navegador?")) {
+    CUSTOM = CUSTOM.filter(f => f.id !== d.id); guardar("bancada:fichas", CUSTOM);
+    recarregar(); atualizarFiltros(); estado.id = null;
+    history.replaceState(null, "", location.pathname + location.search);
+    desenharLista(); desenharFicha();
+  }
+});
+
+function trecho() {
+  const usados = [...new Set(CUSTOM.map(f => f.layout).filter(l => typeof l === "string" && LAYOUTS_CUSTOM[l]))];
+  const ls = usados.map(k => "  " + JSON.stringify(k) + ": " + JSON.stringify(LAYOUTS_CUSTOM[k])).join(",\n");
+  const fs = CUSTOM.map(f => JSON.stringify(f, null, 2)).join(",\n");
+  return '// 1) Cole dentro do bloco "layouts" (ponha uma vírgula antes se já houver itens):\n' + (ls || "// (nenhum layout novo)") +
+    '\n\n// 2) Cole no fim do bloco "dados", antes do ] (vírgula depois da última ficha existente):\n' + (fs || "// (nenhuma ficha salva)");
+}
+$("nTrecho").addEventListener("click", () => { $("nJson").value = trecho(); copiarTexto($("nJson").value, $("nTrecho")); });
+$("nBackup").addEventListener("click", () => { $("nJson").value = JSON.stringify({ layouts: LAYOUTS_CUSTOM, fichas: CUSTOM }, null, 1); copiarTexto($("nJson").value, $("nBackup")); });
+$("nImportar").addEventListener("click", () => {
+  try {
+    const j = JSON.parse($("nJson").value);
+    const fs = (Array.isArray(j) ? j : (j.fichas || (j.nome ? [j] : []))).filter(f => f && f.id && f.nome && Array.isArray(f.pinos));
+    const ls = Array.isArray(j) ? {} : (j.layouts || {});
+    Object.assign(LAYOUTS_CUSTOM, ls); Object.assign(LAYOUTS, ls); guardar("bancada:layouts", LAYOUTS_CUSTOM);
+    fs.forEach(f => { const i = CUSTOM.findIndex(x => x.id === f.id); if (i >= 0) CUSTOM[i] = f; else CUSTOM.push(f); });
+    guardar("bancada:fichas", CUSTOM);
+    recarregar(); atualizarFiltros(); opcoesLayout(); desenharForm(); desenharLista();
+    msg("nMsg", fs.length + " ficha(s) importada(s).");
+  } catch (e) { msg("nMsg", "JSON inválido: " + e.message); }
+});
+
+$("edSalvar").addEventListener("click", () => {
+  const nome = slug($("edNome").value), L = JSON.parse(JSON.stringify(layoutEd()));
+  if (!nome) return msg("edMsg", "Dê um nome ao layout (ex.: masimo-lncs).");
+  if (!L.pinos.length) return msg("edMsg", "Clique no desenho para posicionar ao menos um pino.");
+  if (LAYOUTS_BASE[nome]) return msg("edMsg", "Já existe um layout publicado com esse nome. Escolha outro.");
+  LAYOUTS_CUSTOM[nome] = L; LAYOUTS[nome] = L; guardar("bancada:layouts", LAYOUTS_CUSTOM);
+  opcoesLayout(); $("nLayout").value = nome; desenharForm(); desenharTestes();
+  msg("edMsg", "Layout “" + nome + "” salvo e selecionado no formulário de sensor.");
+});
+
+opcoesLayout(); desenharForm(); desenharTestes();
+atualizarFiltros();
+const inicial = location.hash.slice(1);
+estado.id = DADOS.some(d => d.id === inicial) ? inicial : null;
+desenharLista(); desenharFicha();
+</script>
+</body>
+</html>
