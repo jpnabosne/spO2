@@ -54,6 +54,8 @@ input[type=search],select{width:100%;padding:9px 10px;border:1px solid var(--lin
 .diagrama{overflow-x:auto;border:1px solid var(--line);border-radius:6px;padding:8px;background:var(--bg)}
 svg{display:block;margin:0 auto;max-width:100%;height:auto}
 .pin{cursor:pointer}
+dialog{border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);width:min(520px,92vw);padding:20px}
+dialog::backdrop{background:rgba(0,0,0,.45)}
 .campo{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:4px;background:var(--bg);margin:4px 0 8px;font:inherit;color:inherit}
 textarea.campo{min-height:70px;resize:vertical}
 .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:2px 14px}
@@ -71,7 +73,7 @@ textarea.campo{min-height:70px;resize:vertical}
 .editor summary{cursor:pointer}
 #edCanvas{cursor:crosshair}
 #edJson{width:100%;min-height:70px;font:13px "IBM Plex Mono",monospace;background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:8px;color:var(--ink)}
-.pin circle{stroke:var(--ink);stroke-width:1.5;transition:r .12s}
+.pin circle{stroke:var(--ink);stroke-width:1.5;transition:r .12s;pointer-events:all}
 .pin.sel circle,.pin:hover circle{stroke-width:3.5}
 .pin text{font:600 12px "IBM Plex Mono",monospace;fill:#fff;pointer-events:none}
 .pin.vazio text{fill:var(--ink)}
@@ -103,7 +105,7 @@ footer{max-width:1200px;margin:0 auto;padding:0 20px 30px;color:var(--muted);fon
     <ul id="lista"></ul>
     <p class="meta" id="contagem" style="margin:8px 0 0"></p>
     <button class="btn" id="novoBtn" style="margin-top:10px;width:100%"><strong>+ Novo sensor</strong></button>
-    <button class="btn" id="modelo" style="margin-top:10px">Copiar modelo de nova ficha</button>
+    
   </aside>
   <section class="ficha" id="ficha" aria-live="polite"></section>
 </main>
@@ -117,6 +119,16 @@ footer{max-width:1200px;margin:0 auto;padding:0 20px 30px;color:var(--muted);fon
     <label>Público<select class="campo" id="nPublico"><option>Adulto</option><option>Pediátrico</option><option>Neonatal</option><option>Outro</option></select></label>
     <label>Layout do conector<select class="campo" id="nLayout"></select></label>
     <label>Fonte da informação<input class="campo" type="text" id="nFonte" placeholder="Medição própria, manual do fabricante…"></label>
+  </div>
+  <div id="nLivreBox" hidden>
+    <p class="meta" style="margin:8px 0 4px">Layout livre: clique no desenho para criar um pino naquela posição e descreva o que ele é ao lado. Clique em um pino existente para editá-lo.</p>
+    <div class="tools">
+      <label>Forma <select id="lvForma"><option value="retangulo">Retângulo</option><option value="circulo">Círculo</option><option value="d">D</option></select></label>
+      <label>Largura <input class="num" type="number" id="lvW" value="240" min="120" max="480" step="10"></label>
+      <label>Altura <input class="num" type="number" id="lvH" value="160" min="100" max="400" step="10"></label>
+      <button id="lvDesfazer">Desfazer último pino</button>
+      <button id="lvLimpar">Limpar pinos</button>
+    </div>
   </div>
   <label class="bloco"><input type="checkbox" id="nVerif"> Verificado na bancada</label>
   <div class="nlayout">
@@ -144,68 +156,37 @@ footer{max-width:1200px;margin:0 auto;padding:0 20px 30px;color:var(--muted);fon
   </div>
   <div class="tools">
     <button class="btn primario" id="nSalvar">Salvar sensor</button>
-    <button id="nCopiarFicha">Copiar JSON desta ficha</button>
     <button id="nLimpar">Limpar formulário</button>
   </div>
-  <p class="meta" id="ghStatus"></p>
+  <div class="tools"><span class="meta" id="ghStatus"></span><button id="ghTrocar">Trocar ou remover token</button></div>
   <p class="msg" id="nMsg" aria-live="polite"></p>
-  <h3>Publicar ou guardar as fichas</h3>
-  <p class="meta">As fichas salvas ficam só neste navegador. Para colocá-las no site publicado, gere o trecho e cole no <code>index.html</code>. Para levar a outro computador, use o backup.</p>
-  <div class="tools">
-    <button id="nTrecho">Gerar trecho para publicar</button>
-    <button id="nBackup">Gerar backup (JSON)</button>
-    <button id="nImportar">Importar JSON do campo</button>
-  </div>
-  <textarea id="nJson" aria-label="JSON de fichas" style="width:100%;min-height:90px;font:13px 'IBM Plex Mono',monospace;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:8px"></textarea>
+  
 </details>
 
-<details class="ficha editor" id="gh">
-  <summary><strong>Salvar no GitHub (para todos verem)</strong></summary>
-  <p class="meta">Depois de configurar uma vez, o botão “Salvar sensor” grava as fichas no arquivo <code>dados.json</code> do seu repositório, e o site publicado passa a mostrá-las. O arquivo é criado sozinho no primeiro salvamento.</p>
-  <div class="grid2">
-    <label>Usuário ou organização<input class="campo" type="text" id="ghOwner" placeholder="seu-usuario" autocomplete="off"></label>
-    <label>Repositório<input class="campo" type="text" id="ghRepo" placeholder="nome-do-repositorio" autocomplete="off"></label>
-    <label>Branch<input class="campo" type="text" id="ghBranch" placeholder="main" autocomplete="off"></label>
-    <label>Arquivo de dados<input class="campo" type="text" id="ghCaminho" placeholder="dados.json" autocomplete="off"></label>
+<dialog id="ghDialog" aria-labelledby="ghTitulo">
+  <h3 id="ghTitulo" style="margin-top:0">Conectar ao GitHub</h3>
+  <p class="meta">Para salvar o sensor no seu repositório, e todos verem, cole o token de acesso. Isso é pedido só na primeira vez neste navegador.</p>
+  <div id="ghRepoBox">
+    <label class="bloco">Usuário ou organização<input class="campo" type="text" id="ghOwner" autocomplete="off"></label>
+    <label class="bloco">Repositório<input class="campo" type="text" id="ghRepo" autocomplete="off"></label>
   </div>
-  <label class="bloco">Token de acesso (fine-grained)<input class="campo" type="password" id="ghToken" placeholder="github_pat_…" autocomplete="off"></label>
-  <label class="bloco"><input type="checkbox" id="ghLembrar" checked> Lembrar o token neste navegador (não use em computador compartilhado)</label>
-  <div class="tools">
-    <button class="btn primario" id="ghTestar">Testar e salvar configuração</button>
-    <button id="ghSair">Remover token deste navegador</button>
-  </div>
+  <label class="bloco">Token de acesso<input class="campo" type="password" id="ghToken" placeholder="github_pat_…" autocomplete="off"></label>
+  <label class="bloco"><input type="checkbox" id="ghLembrar" checked> Lembrar neste navegador (não use em computador compartilhado)</label>
   <p class="msg" id="ghMsg" aria-live="polite"></p>
+  <div class="tools"><button class="btn primario" id="ghOk">Conectar e salvar</button><button id="ghCancelar">Cancelar</button></div>
   <details>
     <summary>Como criar o token</summary>
     <ol>
       <li>No GitHub, clique na sua foto, depois em <em>Settings → Developer settings → Personal access tokens → Fine-grained tokens</em>.</li>
-      <li>Clique em <em>Generate new token</em> e dê um nome, por exemplo “Bancada SpO2”. Escolha uma validade (por exemplo, 90 dias).</li>
+      <li>Clique em <em>Generate new token</em>, dê um nome (por exemplo, “Bancada SpO2”) e escolha uma validade.</li>
       <li>Em <em>Repository access</em>, escolha <em>Only select repositories</em> e marque só o repositório do site.</li>
       <li>Em <em>Repository permissions</em>, ajuste <em>Contents</em> para <em>Read and write</em>.</li>
-      <li>Clique em <em>Generate token</em>, copie o código e cole no campo acima. O GitHub só mostra o token uma vez.</li>
+      <li>Clique em <em>Generate token</em>, copie o código e cole aqui. O GitHub só mostra o token uma vez.</li>
     </ol>
-    <p class="meta">Quem tiver o token consegue alterar os arquivos desse repositório. Não o compartilhe nem o coloque no código. Para revogar, apague o token nas configurações do GitHub.</p>
+    <p class="meta">Quem tiver o token consegue alterar os arquivos desse repositório. Cada pessoa deve criar o seu e não compartilhá-lo.</p>
   </details>
-</details>
+</dialog>
 
-<details class="ficha editor" id="editor">
-  <summary><strong>Criar layout livre</strong></summary>
-  <p class="meta">Escolha a forma e clique no desenho para posicionar os pinos, na ordem da numeração. Depois copie o JSON, cole no bloco “layouts” com um nome e use esse nome na ficha.</p>
-  <div class="tools">
-    <label>Forma <select id="edForma"><option value="retangulo">Retângulo</option><option value="circulo">Círculo</option><option value="d">D</option></select></label>
-    <label>Largura <input class="num" type="number" id="edW" value="240" min="120" max="480" step="10"></label>
-    <label>Altura <input class="num" type="number" id="edH" value="160" min="100" max="400" step="10"></label>
-    <button id="edDesfazer">Desfazer último pino</button>
-    <button id="edLimpar">Limpar</button>
-    <label>Nome do layout <input class="num" style="width:170px" type="text" id="edNome" placeholder="ex.: masimo-lncs"></label>
-    <button id="edSalvar">Salvar layout</button>
-  </div>
-  <div class="diagrama" id="edCanvas"></div>
-  <p class="meta" id="edMsg" aria-live="polite"></p>
-  <h3>JSON do layout</h3>
-  <textarea id="edJson" readonly aria-label="JSON do layout"></textarea>
-  <div class="tools"><button id="edCopiar">Copiar JSON</button></div>
-</details>
 <footer>Fichas cadastradas pelo formulário ficam no arquivo dados.json do repositório (se o GitHub estiver configurado) ou só neste navegador.</footer>
 
 <!-- ===================== LAYOUTS E DADOS (edite aqui) =====================
@@ -530,45 +511,9 @@ $("ficha").addEventListener("keydown", e => {
 });
 ["busca", "fPublico", "fConector"].forEach(id => $(id).addEventListener("input", desenharLista));
 
-$("modelo").addEventListener("click", async () => {
-  const modelo = { id: "marca-modelo", nome: "", fabricante: "", conector: "DB9", publico: "Adulto",
-    layout: { linhas: [5, 4] }, verificado: false, fonte: "",
-    pinos: [{ n: 1, tipo: "led", rotulo: "", fio: "" }],
-    testes: [{ de: "1", para: "2", modo: "Diodo", esperado: "" }], ponto_solda: "", notas: "" };
-  try { await navigator.clipboard.writeText(JSON.stringify(modelo, null, 2)); $("modelo").textContent = "Modelo copiado"; }
-  catch { $("modelo").textContent = "Não foi possível copiar"; }
-  setTimeout(() => $("modelo").textContent = "Copiar modelo de nova ficha", 2000);
-});
-
-/* Editor de layout livre */
-const ed = { pinos: [] };
-const layoutEd = () => ({ tipo: "livre", largura: +$("edW").value || 240, altura: +$("edH").value || 160, forma: $("edForma").value, pinos: ed.pinos });
-function desenharEditor() {
-  const L = layoutEd(), g = layLivre(L);
-  const marcas = ed.pinos.map(p => `<g class="pin"><circle cx="${p.x}" cy="${p.y}" r="15" fill="var(--accent)"/><text x="${p.x}" y="${p.y + 4}" text-anchor="middle">${p.n}</text></g>`).join("");
-  $("edCanvas").innerHTML = montarSvg(g, marcas, "editor de layout", false);
-  $("edJson").value = JSON.stringify(L);
-}
-$("edCanvas").addEventListener("click", e => {
-  const s = $("edCanvas").querySelector("svg"); if (!s) return;
-  const r = s.getBoundingClientRect(), vb = s.viewBox.baseVal;
-  const x = Math.round((e.clientX - r.left) * vb.width / r.width / 5) * 5;
-  const y = Math.round((e.clientY - r.top) * vb.height / r.height / 5) * 5;
-  if (ed.pinos.some(p => Math.hypot(p.x - x, p.y - y) < 18)) return;
-  ed.pinos.push({ n: ed.pinos.length + 1, x, y }); desenharEditor();
-});
-["edForma", "edW", "edH"].forEach(id => $(id).addEventListener("input", desenharEditor));
-$("edDesfazer").addEventListener("click", () => { ed.pinos.pop(); desenharEditor(); });
-$("edLimpar").addEventListener("click", () => { ed.pinos = []; desenharEditor(); });
-$("edCopiar").addEventListener("click", async () => {
-  try { await navigator.clipboard.writeText($("edJson").value); $("edCopiar").textContent = "JSON copiado"; }
-  catch { $("edJson").select(); $("edCopiar").textContent = "Selecionado: use Ctrl+C"; }
-  setTimeout(() => $("edCopiar").textContent = "Copiar JSON", 2500);
-});
-desenharEditor();
-
 /* ===== Formulário visual de novo sensor ===== */
-const nf = { pinos: {}, sel: null, testes: [], id: null, inlineKey: null };
+const LIVRE = "__livre__";
+const nf = { pinos: {}, sel: null, testes: [], id: null, inlineKey: null, livre: { forma: "retangulo", W: 240, H: 160, pinos: [] } };
 const MODOS = ["Diodo", "Ohm", "Continuidade", "Tensão"];
 const slug = t => norm(t).replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 const msg = (id, t) => { $(id).textContent = t; };
@@ -586,13 +531,17 @@ function atualizarFiltros() {
 }
 function opcoesLayout() {
   const el = $("nLayout"), v = el.value;
-  el.innerHTML = Object.keys(LAYOUTS).map(k => `<option value="${esc(k)}">${esc(k)}</option>`).join("");
-  if (v && LAYOUTS[v]) el.value = v;
+  el.innerHTML = `<option value="${LIVRE}">✎ Desenhar layout livre…</option>` + Object.keys(LAYOUTS).map(k => `<option value="${esc(k)}">${esc(k)}</option>`).join("");
+  el.value = v === LIVRE || (v && LAYOUTS[v]) ? v : (Object.keys(LAYOUTS)[0] || LIVRE);
 }
 $("pTipo").innerHTML = '<option value="">— escolher —</option>' + Object.entries(TIPOS).map(([k, v]) => `<option value="${k}">${v[0]}</option>`).join("");
 $("nLeg").innerHTML = Object.entries(TIPOS).map(([k, v]) => `<span><i style="background:${v[1]};${k === "nc" ? "border:1.5px solid var(--ink)" : ""}"></i>${v[0]}</span>`).join("");
 
-const layoutAtual = () => { const L = LAYOUTS[$("nLayout").value]; return L ? geometria(L) : null; };
+const layoutDoForm = () => $("nLayout").value === LIVRE
+  ? { tipo: "livre", largura: nf.livre.W, altura: nf.livre.H, forma: nf.livre.forma, pinos: nf.livre.pinos }
+  : LAYOUTS[$("nLayout").value];
+const layoutAtual = () => { const L = layoutDoForm(); return L ? geometria(L) : null; };
+function syncLivreUI() { $("lvForma").value = nf.livre.forma; $("lvW").value = nf.livre.W; $("lvH").value = nf.livre.H; }
 
 function marcaForm(n, x, y) {
   const f = nf.pinos[n], t = f ? f.tipo : "nc", sel = nf.sel === n;
@@ -602,6 +551,7 @@ function marcaForm(n, x, y) {
     <text x="${arred(x)}" y="${arred(y + 4)}" text-anchor="middle">${n}</text></g>`;
 }
 function desenharForm() {
+  $("nLivreBox").hidden = $("nLayout").value !== LIVRE;
   const g = layoutAtual();
   $("nCanvas").innerHTML = g ? montarSvg(g, g.pinos.map(p => marcaForm(p.n, p.x, p.y)).join(""), "novo sensor", false) : '<p class="vazio-msg">Escolha um layout.</p>';
   $("nPinTab").innerHTML = (g ? g.pinos : []).map(p => {
@@ -621,7 +571,34 @@ function selecionarPino(n) {
   desenharForm();
 }
 const clicaPino = e => { const p = e.target.closest("[data-n]"); if (p) selecionarPino(+p.dataset.n); };
-$("nCanvas").addEventListener("click", clicaPino);
+$("nCanvas").addEventListener("click", e => {
+  const p = e.target.closest("[data-n]");
+  if (p) return selecionarPino(+p.dataset.n);
+  if ($("nLayout").value !== LIVRE) return;
+  const sv = e.target.closest("svg"); if (!sv) return;
+  const r = sv.getBoundingClientRect(), vb = sv.viewBox.baseVal;
+  const x = Math.round((e.clientX - r.left) * vb.width / r.width / 5) * 5;
+  const y = Math.round((e.clientY - r.top) * vb.height / r.height / 5) * 5;
+  if (x < 15 || y < 15 || x > vb.width - 15 || y > vb.height - 15) return;
+  const perto = nf.livre.pinos.find(q => Math.hypot(q.x - x, q.y - y) < 18);
+  if (perto) return selecionarPino(perto.n);
+  const n = nf.livre.pinos.length + 1;
+  nf.livre.pinos.push({ n, x, y });
+  selecionarPino(n);
+  $("pTipo").focus();
+});
+function fecharPainelPino() {
+  nf.sel = null; $("nPinCampos").hidden = true;
+  $("nPinTitulo").textContent = "Clique em um pino no desenho para definir a função dele.";
+}
+const lvSync = () => { nf.livre.forma = $("lvForma").value; nf.livre.W = +$("lvW").value || 240; nf.livre.H = +$("lvH").value || 160; desenharForm(); };
+["lvForma", "lvW", "lvH"].forEach(id => $(id).addEventListener("input", lvSync));
+$("lvDesfazer").addEventListener("click", () => {
+  const q = nf.livre.pinos.pop(); if (!q) return;
+  delete nf.pinos[q.n]; if (nf.sel === q.n) fecharPainelPino();
+  desenharForm();
+});
+$("lvLimpar").addEventListener("click", () => { nf.livre.pinos = []; nf.pinos = {}; fecharPainelPino(); desenharForm(); });
 $("nPinTab").addEventListener("click", clicaPino);
 $("nCanvas").addEventListener("keydown", e => {
   if ((e.key === "Enter" || e.key === " ") && e.target.matches(".pin")) { e.preventDefault(); selecionarPino(+e.target.dataset.n); }
@@ -684,7 +661,7 @@ function fichaDoForm() {
   const pinos = (g ? g.pinos.map(p => p.n) : []).filter(n => nf.pinos[n]).map(n => ({ n, tipo: nf.pinos[n].tipo, rotulo: nf.pinos[n].rotulo.trim(), fio: nf.pinos[n].fio.trim() }));
   return {
     id: nf.id || gerarId(nome), nome, fabricante: $("nFab").value.trim(), conector: $("nConector").value.trim() || "—",
-    publico: $("nPublico").value, layout: nf.inlineKey && lk === nf.inlineKey ? LAYOUTS[lk] : lk,
+    publico: $("nPublico").value, layout: lk === LIVRE ? JSON.parse(JSON.stringify(layoutDoForm())) : (nf.inlineKey && lk === nf.inlineKey ? LAYOUTS[lk] : lk),
     verificado: $("nVerif").checked, fonte: $("nFonte").value.trim(), pinos,
     testes: nf.testes.filter(t => t.de !== "" && t.para !== "").map(t => ({ de: String(t.de), para: String(t.para), modo: t.modo, esperado: t.esperado.trim() })),
     ponto_solda: $("nSolda").value.trim(), notas: $("nNotas").value.trim()
@@ -692,7 +669,8 @@ function fichaDoForm() {
 }
 function limparForm() {
   if (nf.inlineKey) delete LAYOUTS[nf.inlineKey];
-  Object.assign(nf, { pinos: {}, sel: null, testes: [], id: null, inlineKey: null });
+  Object.assign(nf, { pinos: {}, sel: null, testes: [], id: null, inlineKey: null, livre: { forma: "retangulo", W: 240, H: 160, pinos: [] } });
+  $("nLayout").selectedIndex = -1; syncLivreUI();
   ["nNome", "nFab", "nConector", "nFonte", "nSolda", "nNotas"].forEach(i => $(i).value = "");
   $("nVerif").checked = false; $("nPublico").value = "Adulto";
   $("nPinCampos").hidden = true;
@@ -706,9 +684,15 @@ function carregarNoForm(d) {
   $("nPublico").value = d.publico || "Outro"; $("nFonte").value = d.fonte || ""; $("nVerif").checked = !!d.verificado;
   $("nSolda").value = d.ponto_solda || ""; $("nNotas").value = d.notas || "";
   nf.id = (d._custom || d._remoto) ? d.id : null;
-  if (typeof d.layout === "object") { nf.inlineKey = "(layout desta ficha)"; LAYOUTS[nf.inlineKey] = d.layout; }
+  let valorLayout = d.layout;
+  if (typeof d.layout === "object") {
+    if (d.layout.tipo === "livre") {
+      nf.livre = { forma: d.layout.forma || "retangulo", W: d.layout.largura || 240, H: d.layout.altura || 160, pinos: (d.layout.pinos || []).map(q => ({ ...q })) };
+      valorLayout = LIVRE; syncLivreUI();
+    } else { nf.inlineKey = "(layout desta ficha)"; LAYOUTS[nf.inlineKey] = d.layout; valorLayout = nf.inlineKey; }
+  }
   opcoesLayout();
-  $("nLayout").value = typeof d.layout === "string" ? d.layout : nf.inlineKey;
+  $("nLayout").value = valorLayout;
   nf.pinos = Object.fromEntries((d.pinos || []).map(p => [p.n, { tipo: p.tipo, rotulo: p.rotulo || "", fio: p.fio || "" }]));
   nf.testes = (d.testes || []).map(t => ({ ...t }));
   desenharForm(); desenharTestes();
@@ -718,14 +702,17 @@ function carregarNoForm(d) {
 $("nSalvar").addEventListener("click", async () => {
   const f = fichaDoForm();
   if (!f.nome) return msg("nMsg", "Digite o nome do sensor.");
-  if (!f.pinos.length) return msg("nMsg", "Defina ao menos um pino: clique nele no desenho.");
+  if (!f.pinos.length) return msg("nMsg", "Defina ao menos um pino: clique nele no desenho e escolha a função.");
   const salvarLocal = () => {
     const i = CUSTOM.findIndex(x => x.id === f.id);
     if (i >= 0) CUSTOM[i] = f; else CUSTOM.push(f);
     return guardar("bancada:fichas", CUSTOM);
   };
-  if (ghConfigurado()) {
-    msg("nMsg", "Salvando no GitHub…"); $("nSalvar").disabled = true;
+  const aviso = $("nSalvar"); aviso.disabled = true;
+  let usarGH = ghConfigurado();
+  if (!usarGH) usarGH = await pedirToken();
+  if (usarGH) {
+    msg("nMsg", "Salvando no GitHub…");
     try {
       const k = typeof f.layout === "string" && LAYOUTS_CUSTOM[f.layout] ? f.layout : null;
       const dados = await ghAtualizar(d => {
@@ -734,21 +721,20 @@ $("nSalvar").addEventListener("click", async () => {
         if (i >= 0) d.fichas[i] = f; else d.fichas.push(f);
       }, "Sensor: " + f.nome);
       CUSTOM = CUSTOM.filter(x => x.id !== f.id); guardar("bancada:fichas", CUSTOM);
-      if (k) { delete LAYOUTS_CUSTOM[k]; guardar("bancada:layouts", LAYOUTS_CUSTOM); }
       aplicarRemoto(dados); nf.id = f.id; selecionar(f.id);
-      msg("nMsg", "Salvo no GitHub. O site público atualiza em cerca de 1 minuto.");
+      msg("nMsg", "Sensor salvo no GitHub. O site público atualiza em cerca de 1 minuto.");
     } catch (e) {
+      if (/inválido ou expirado/.test(e.message)) { GH.token = ""; guardarGH(); }
       salvarLocal(); recarregar(); atualizarFiltros(); nf.id = f.id; selecionar(f.id);
-      msg("nMsg", "Não foi possível salvar no GitHub (" + e.message + "). A ficha ficou salva só neste navegador.");
+      msg("nMsg", "Não foi possível salvar no GitHub (" + e.message + ") A ficha ficou salva só neste navegador.");
     }
-    $("nSalvar").disabled = false;
-    return;
+  } else {
+    const ok = salvarLocal();
+    recarregar(); atualizarFiltros(); nf.id = f.id; selecionar(f.id);
+    msg("nMsg", ok ? "Salvo só neste navegador, porque o GitHub não foi conectado." : "Não foi possível salvar nem neste navegador.");
   }
-  const ok = salvarLocal();
-  recarregar(); atualizarFiltros(); nf.id = f.id; selecionar(f.id);
-  msg("nMsg", ok ? "Salvo só neste navegador. Configure o GitHub (seção abaixo) para salvar para todos." : "Não foi possível salvar neste navegador. Use “Copiar JSON desta ficha”.");
+  aviso.disabled = false; statusGH();
 });
-$("nCopiarFicha").addEventListener("click", () => copiarTexto(JSON.stringify(fichaDoForm(), null, 2), $("nCopiarFicha")));
 $("nLimpar").addEventListener("click", limparForm);
 $("novoBtn").addEventListener("click", () => { limparForm(); abrirForm(); });
 
@@ -771,50 +757,21 @@ $("ficha").addEventListener("click", async e => {
   desenharLista(); desenharFicha();
 });
 
-function trecho() {
-  const usados = [...new Set(CUSTOM.map(f => f.layout).filter(l => typeof l === "string" && LAYOUTS_CUSTOM[l]))];
-  const ls = usados.map(k => "  " + JSON.stringify(k) + ": " + JSON.stringify(LAYOUTS_CUSTOM[k])).join(",\n");
-  const fs = CUSTOM.map(f => JSON.stringify(f, null, 2)).join(",\n");
-  return '// 1) Cole dentro do bloco "layouts" (ponha uma vírgula antes se já houver itens):\n' + (ls || "// (nenhum layout novo)") +
-    '\n\n// 2) Cole no fim do bloco "dados", antes do ] (vírgula depois da última ficha existente):\n' + (fs || "// (nenhuma ficha salva)");
-}
-$("nTrecho").addEventListener("click", () => { $("nJson").value = trecho(); copiarTexto($("nJson").value, $("nTrecho")); });
-$("nBackup").addEventListener("click", () => { $("nJson").value = JSON.stringify({ layouts: LAYOUTS_CUSTOM, fichas: CUSTOM }, null, 1); copiarTexto($("nJson").value, $("nBackup")); });
-$("nImportar").addEventListener("click", () => {
-  try {
-    const j = JSON.parse($("nJson").value);
-    const fs = (Array.isArray(j) ? j : (j.fichas || (j.nome ? [j] : []))).filter(f => f && f.id && f.nome && Array.isArray(f.pinos));
-    const ls = Array.isArray(j) ? {} : (j.layouts || {});
-    Object.assign(LAYOUTS_CUSTOM, ls); Object.assign(LAYOUTS, ls); guardar("bancada:layouts", LAYOUTS_CUSTOM);
-    fs.forEach(f => { const i = CUSTOM.findIndex(x => x.id === f.id); if (i >= 0) CUSTOM[i] = f; else CUSTOM.push(f); });
-    guardar("bancada:fichas", CUSTOM);
-    recarregar(); atualizarFiltros(); opcoesLayout(); desenharForm(); desenharLista();
-    msg("nMsg", fs.length + " ficha(s) importada(s).");
-  } catch (e) { msg("nMsg", "JSON inválido: " + e.message); }
-});
-
-$("edSalvar").addEventListener("click", () => {
-  const nome = slug($("edNome").value), L = JSON.parse(JSON.stringify(layoutEd()));
-  if (!nome) return msg("edMsg", "Dê um nome ao layout (ex.: masimo-lncs).");
-  if (!L.pinos.length) return msg("edMsg", "Clique no desenho para posicionar ao menos um pino.");
-  if (LAYOUTS_BASE[nome]) return msg("edMsg", "Já existe um layout publicado com esse nome. Escolha outro.");
-  LAYOUTS_CUSTOM[nome] = L; LAYOUTS[nome] = L; guardar("bancada:layouts", LAYOUTS_CUSTOM);
-  opcoesLayout(); $("nLayout").value = nome; desenharForm(); desenharTestes();
-  msg("edMsg", "Layout “" + nome + "” salvo e selecionado no formulário de sensor.");
-});
-
 /* ===== Salvar no GitHub ===== */
 const GH = Object.assign({ owner: "", repo: "", branch: "main", caminho: "dados.json", token: "", lembrar: true }, ler("bancada:gh", {}));
+let ghDetectado = false;
 (() => {
   const h = location.hostname, r = location.pathname.split("/")[1] || "";
   if (h.endsWith(".github.io")) {
-    if (!GH.owner) GH.owner = h.split(".")[0];
-    if (!GH.repo) GH.repo = r && !/\.html?$/.test(r) ? r : h;
+    GH.owner = h.split(".")[0];
+    GH.repo = r && !/\.html?$/.test(r) ? r : h;
+    ghDetectado = true;
   }
 })();
 const ghConfigurado = () => !!(GH.owner && GH.repo && GH.token);
 const guardarGH = () => guardar("bancada:gh", { ...GH, token: GH.lembrar ? GH.token : "" });
-const ghUrl = () => `https://api.github.com/repos/${encodeURIComponent(GH.owner)}/${encodeURIComponent(GH.repo)}/contents/${GH.caminho.split("/").map(encodeURIComponent).join("/")}`;
+const ghBase = () => `https://api.github.com/repos/${encodeURIComponent(GH.owner)}/${encodeURIComponent(GH.repo)}`;
+const ghUrl = () => ghBase() + "/contents/" + GH.caminho.split("/").map(encodeURIComponent).join("/");
 const ghHeaders = () => ({ Accept: "application/vnd.github+json", Authorization: "Bearer " + GH.token });
 const b64enc = t => { let b = ""; new TextEncoder().encode(t).forEach(x => b += String.fromCharCode(x)); return btoa(b); };
 const b64dec = t => new TextDecoder().decode(Uint8Array.from(atob(t.replace(/\s/g, "")), c => c.charCodeAt(0)));
@@ -863,29 +820,38 @@ async function carregarRemoto() {
 }
 function statusGH() {
   $("ghStatus").textContent = ghConfigurado()
-    ? "Destino ao salvar: GitHub (" + GH.owner + "/" + GH.repo + "), visível para todos."
-    : "Destino ao salvar: apenas este navegador. Configure “Salvar no GitHub” para todos verem.";
+    ? "Ao salvar: GitHub (" + GH.owner + "/" + GH.repo + "), visível para todos."
+    : "Ao salvar, será pedido o token do GitHub (só na primeira vez).";
+  $("ghTrocar").hidden = !GH.token;
 }
-$("ghOwner").value = GH.owner; $("ghRepo").value = GH.repo; $("ghBranch").value = GH.branch;
-$("ghCaminho").value = GH.caminho; $("ghToken").value = GH.token; $("ghLembrar").checked = GH.lembrar;
-$("ghTestar").addEventListener("click", async () => {
-  Object.assign(GH, {
-    owner: $("ghOwner").value.trim(), repo: $("ghRepo").value.trim(), branch: $("ghBranch").value.trim() || "main",
-    caminho: $("ghCaminho").value.trim() || "dados.json", token: $("ghToken").value.trim(), lembrar: $("ghLembrar").checked
-  });
+async function ghConectar() {
+  GH.owner = $("ghOwner").value.trim(); GH.repo = $("ghRepo").value.trim();
+  GH.token = $("ghToken").value.trim(); GH.lembrar = $("ghLembrar").checked;
+  if (!GH.token) throw new Error("cole o token de acesso.");
+  if (!GH.owner || !GH.repo) throw new Error("informe o usuário e o repositório.");
+  const r = await fetch(ghBase(), { headers: ghHeaders() });
+  if (!r.ok) throw new Error(await ghErro(r));
+  GH.branch = (await r.json()).default_branch || "main";
   guardarGH();
-  if (!ghConfigurado()) { statusGH(); return msg("ghMsg", "Preencha usuário, repositório e token."); }
-  try {
-    const r = await fetch(`https://api.github.com/repos/${encodeURIComponent(GH.owner)}/${encodeURIComponent(GH.repo)}`, { headers: ghHeaders() });
-    if (!r.ok) throw new Error(await ghErro(r));
-    msg("ghMsg", "Conectado ao repositório. A permissão de escrita é conferida ao salvar o primeiro sensor.");
-    await carregarRemoto();
-  } catch (e) { msg("ghMsg", "Falhou: " + e.message); }
-  statusGH();
-});
-$("ghSair").addEventListener("click", () => {
-  GH.token = ""; $("ghToken").value = ""; guardarGH(); statusGH(); msg("ghMsg", "Token removido deste navegador.");
-});
+}
+function pedirToken() {
+  return new Promise(resolve => {
+    const dlg = $("ghDialog");
+    $("ghOwner").value = GH.owner; $("ghRepo").value = GH.repo; $("ghToken").value = ""; $("ghLembrar").checked = GH.lembrar;
+    $("ghRepoBox").hidden = ghDetectado && !!(GH.owner && GH.repo);
+    msg("ghMsg", "");
+    $("ghCancelar").onclick = () => dlg.close("cancelar");
+    $("ghOk").onclick = async () => {
+      $("ghOk").disabled = true; msg("ghMsg", "Conectando…");
+      try { await ghConectar(); dlg.close("ok"); }
+      catch (e) { GH.token = ""; $("ghRepoBox").hidden = false; msg("ghMsg", "Falhou: " + e.message); }
+      $("ghOk").disabled = false;
+    };
+    dlg.onclose = () => resolve(dlg.returnValue === "ok");
+    dlg.returnValue = ""; dlg.showModal();
+  });
+}
+$("ghTrocar").addEventListener("click", () => { GH.token = ""; guardarGH(); statusGH(); msg("nMsg", "Token removido deste navegador."); });
 statusGH();
 
 opcoesLayout(); desenharForm(); desenharTestes();
