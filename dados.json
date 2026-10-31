@@ -21,6 +21,27 @@
    "testes": [],
    "ponto_solda": "",
    "notas": ""
+  },
+  {
+   "id": "a-2",
+   "nome": "a",
+   "fabricante": "",
+   "conector": "—",
+   "publico": "Adulto",
+   "layout": "db9",
+   "verificado": false,
+   "fonte": "",
+   "pinos": [
+    {
+     "n": 1,
+     "tipo": "fotodiodo",
+     "rotulo": "Fotodiodo (receptor)",
+     "fio": ""
+    }
+   ],
+   "testes": [],
+   "ponto_solda": "",
+   "notas": ""
   }
  ]
 }
