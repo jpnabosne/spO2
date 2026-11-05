@@ -1,26 +1,4 @@
 {
  "layouts": {},
- "fichas": [
-  {
-   "id": "a",
-   "nome": "b",
-   "fabricante": "",
-   "conector": "—",
-   "publico": "Adulto",
-   "layout": "db9",
-   "verificado": false,
-   "fonte": "",
-   "pinos": [
-    {
-     "n": 1,
-     "tipo": "led",
-     "rotulo": "LEDs em antiparalelo",
-     "fio": "vermelho"
-    }
-   ],
-   "testes": [],
-   "ponto_solda": "",
-   "notas": ""
-  }
- ]
+ "fichas": []
 }
